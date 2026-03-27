@@ -16,19 +16,37 @@ import { getIconComponent } from '../../lib/iconRegistry';
 const COLORS = ['#5C6EFF', '#22c55e', '#F9A825', '#ef4444', '#9B5CFF', '#06b6d4'];
 
 /* ── Donut ring chart ── */
-const DonutChart = ({ value, total, color = '#5C6EFF', size = 140 }) => {
+const DonutChart = ({ segments, total, size = 140 }) => {
   const r = 52, cx = 70, cy = 70;
-  const rawC = 2 * Math.PI * r;
-  const pct = total > 0 ? Math.min(value / total, 1) : 0;
+  const circ = 2 * Math.PI * r;
+  let accumulatedPct = 0;
+
   return (
     <svg width={size} height={size} viewBox="0 0 140 140">
       <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#EEF2FB" />
-      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke={color}
-        strokeDasharray={`${pct * rawC} ${rawC}`}
-        strokeLinecap="round"
-        style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px', transition: 'stroke-dasharray 0.7s ease' }} />
+      {segments.map((seg, i) => {
+        const pct = total > 0 ? seg.value / total : 0;
+        const strokeDasharray = `${pct * circ} ${circ}`;
+        const strokeDashoffset = -(accumulatedPct * circ);
+        accumulatedPct += pct;
+        return (
+          <circle
+            key={i}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            strokeWidth={16}
+            stroke={seg.color}
+            strokeDasharray={strokeDasharray}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px', transition: 'stroke-dasharray 0.7s ease, stroke-dashoffset 0.7s ease' }}
+          />
+        );
+      })}
       <text x="70" y="65" textAnchor="middle" style={{ fontSize: 15, fontWeight: 800, fill: '#1a1a2e', fontFamily: 'Inter' }}>
-        {value.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
+        {total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
       </text>
       <text x="70" y="83" textAnchor="middle" style={{ fontSize: 10, fontWeight: 600, fill: '#B0B8C9', fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: 1 }}>
         Total
@@ -85,6 +103,11 @@ const Incomes = () => {
   const total = incomes.reduce((a, c) => a + parseFloat(c.amount), 0);
   const ACCENT = '#5C6EFF';
 
+  const donutSegments = incomes.map(inc => ({
+    value: parseFloat(inc.amount),
+    color: inc.color || ACCENT
+  }));
+
   return (
     <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
       <TopBar title="Revenus" />
@@ -105,7 +128,7 @@ const Incomes = () => {
                 <span style={{ fontSize: 22, fontWeight: 900, color: '#1a1a2e' }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <DonutChart value={total} total={total || 1} color={ACCENT} size={120} />
+                <DonutChart segments={donutSegments} total={total || 1} size={120} />
               </div>
               <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px' }}>
                 {incomes.slice(0, 3).map(inc => (

@@ -16,6 +16,46 @@ import { getIconComponent } from '../../lib/iconRegistry';
 const COLORS = ['#9B5CFF', '#ef4444', '#f97316', '#5C6EFF', '#22c55e', '#F9A825'];
 const ACCENT = '#9B5CFF';
 
+/* ── Donut ring chart ── */
+const DonutChart = ({ segments, total, size = 140 }) => {
+  const r = 52, cx = 70, cy = 70;
+  const circ = 2 * Math.PI * r;
+  let accumulatedPct = 0;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 140 140">
+      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#EEF2FB" />
+      {segments.map((seg, i) => {
+        const pct = total > 0 ? seg.value / total : 0;
+        const strokeDasharray = `${pct * circ} ${circ}`;
+        const strokeDashoffset = -(accumulatedPct * circ);
+        accumulatedPct += pct;
+        return (
+          <circle
+            key={i}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            strokeWidth={16}
+            stroke={seg.color}
+            strokeDasharray={strokeDasharray}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px', transition: 'stroke-dasharray 0.7s ease, stroke-dashoffset 0.7s ease' }}
+          />
+        );
+      })}
+      <text x="70" y="65" textAnchor="middle" style={{ fontSize: 15, fontWeight: 800, fill: '#1a1a2e', fontFamily: 'Inter' }}>
+        {total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
+      </text>
+      <text x="70" y="83" textAnchor="middle" style={{ fontSize: 10, fontWeight: 600, fill: '#B0B8C9', fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: 1 }}>
+        Total
+      </text>
+    </svg>
+  );
+};
+
 const Expenses = () => {
   const { user } = useAuth();
   const { selectedDate, setSelectedDate } = useMonth();
@@ -59,6 +99,11 @@ const Expenses = () => {
   const del = async (id) => { await supabase.from('expenses').delete().eq('id', id); fetchData(); };
   const total = expenses.reduce((a, c) => a + parseFloat(c.amount), 0);
 
+  const donutSegments = expenses.map(exp => ({
+    value: parseFloat(exp.amount),
+    color: exp.color || ACCENT
+  }));
+
   return (
     <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
       <TopBar title="Dépenses fixes" />
@@ -70,23 +115,25 @@ const Expenses = () => {
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Loader2 size={32} style={{ color: ACCENT }} className="animate-spin" /></div>
         ) : (
           <>
-            {/* Summary card with ring */}
-            <div className="card fade-up" style={{ padding: '20px', marginTop: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600 }}>Total</p>
-                  <p style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e' }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
-                </div>
-                {/* Ring donut */}
-                <svg width={100} height={100} viewBox="0 0 140 140">
-                  <circle cx="70" cy="70" r="52" fill="none" strokeWidth={16} stroke="#EEF2FB" />
-                  <circle cx="70" cy="70" r="52" fill="none" strokeWidth={16} stroke={ACCENT}
-                    strokeDasharray={`${Math.min(total / Math.max(total, 1), 1) * 2 * Math.PI * 52} ${2 * Math.PI * 52}`}
-                    strokeLinecap="round" style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px' }} />
-                  <text x="70" y="78" textAnchor="middle" style={{ fontSize: 13, fontWeight: 800, fill: '#1a1a2e', fontFamily: 'Inter' }}>
-                    {total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
-                  </text>
-                </svg>
+            {/* Summary card with responsive donut and legend */}
+            <div className="card fade-up" style={{ padding: '20px', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
+                <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Total</p>
+                <p style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e' }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <DonutChart segments={donutSegments} total={total || 1} size={120} />
+              </div>
+              <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px' }}>
+                {expenses.slice(0, 3).map(exp => (
+                  <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: exp.color || ACCENT, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.name}</span>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e', flexShrink: 0 }}>{parseFloat(exp.amount).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                  </div>
+                ))}
               </div>
             </div>
 
