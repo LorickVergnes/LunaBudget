@@ -12,6 +12,7 @@ import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import { useAuth } from './hooks/useAuth';
 import { Loader2 } from 'lucide-react';
+import { MonthProvider } from './contexts/MonthContext';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -26,24 +27,26 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+    <MonthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
-        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/incomes" element={<ProtectedRoute><Incomes /></ProtectedRoute>} />
-        <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-        <Route path="/envelopes" element={<ProtectedRoute><Envelopes /></ProtectedRoute>} />
-        <Route path="/envelopes/:id" element={<ProtectedRoute><EnvelopeDetail /></ProtectedRoute>} />
-        <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
-        <Route path="/savings/:id" element={<ProtectedRoute><SavingDetail /></ProtectedRoute>} />
-        <Route path="/global" element={<ProtectedRoute><GlobalView /></ProtectedRoute>} />
-        <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/incomes" element={<ProtectedRoute><Incomes /></ProtectedRoute>} />
+          <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+          <Route path="/envelopes" element={<ProtectedRoute><Envelopes /></ProtectedRoute>} />
+          <Route path="/envelopes/:id" element={<ProtectedRoute><EnvelopeDetail /></ProtectedRoute>} />
+          <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
+          <Route path="/savings/:id" element={<ProtectedRoute><SavingDetail /></ProtectedRoute>} />
+          <Route path="/global" element={<ProtectedRoute><GlobalView /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
 
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </MonthProvider>
   );
 }
 

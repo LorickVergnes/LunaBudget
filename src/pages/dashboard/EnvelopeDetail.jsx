@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { ArrowLeft, Plus, Check, Loader2, Trash2, Calendar, Pencil, ShoppingCart } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -15,7 +16,7 @@ const EnvelopeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedDate] = useState(new Date(location.state?.date || new Date()));
+  const { selectedDate } = useMonth();
   const [envelopeName] = useState(location.state?.name || 'Enveloppe');
   const envelopeIcon = location.state?.icon || 'Wallet';
   const envelopeColor = location.state?.color || '#5C6EFF';

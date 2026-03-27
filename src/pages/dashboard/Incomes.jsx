@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
 import MonthSelector from '../../components/layout/MonthSelector';
@@ -38,8 +39,7 @@ const DonutChart = ({ value, total, color = '#5C6EFF', size = 140 }) => {
 
 const Incomes = () => {
   const { user } = useAuth();
-  const location = useLocation();
-  const [selectedDate, setSelectedDate] = useState(new Date(location.state?.date || new Date()));
+  const { selectedDate, setSelectedDate } = useMonth();
   const [incomes, setIncomes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

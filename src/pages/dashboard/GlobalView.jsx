@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Loader2, TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import BottomNav from '../../components/layout/BottomNav';
@@ -8,17 +9,18 @@ import TopBar from '../../components/layout/TopBar';
 
 const GlobalView = () => {
     const { user } = useAuth();
+    const { selectedDate } = useMonth();
     const [loading, setLoading] = useState(true);
     const [months, setMonths] = useState([]);
     const [allTimeBalance, setAllTimeBalance] = useState(0);
 
-    useEffect(() => { if (user) fetchGlobal(); }, [user]);
+    useEffect(() => { if (user) fetchGlobal(); }, [user, selectedDate]);
 
     const fetchGlobal = async () => {
         setLoading(true);
         try {
             // Fetch All Time Data (up to current month only)
-            const currentMonthStr = formatMonthDate(new Date());
+            const currentMonthStr = formatMonthDate(selectedDate);
             const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allSav }] = await Promise.all([
                 supabase.from('incomes').select('amount').eq('user_id', user.id).lte('month_date', currentMonthStr),
                 supabase.from('expenses').select('amount').eq('user_id', user.id).lte('month_date', currentMonthStr),
@@ -36,7 +38,7 @@ const GlobalView = () => {
 
             const result = [];
             for (let i = 5; i >= 0; i--) {
-                const d = new Date();
+                const d = new Date(selectedDate);
                 d.setMonth(d.getMonth() - i);
                 const str = formatMonthDate(d);
                 const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });

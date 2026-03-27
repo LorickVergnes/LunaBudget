@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -64,8 +65,8 @@ const BudgetRow = ({ icon: Icon, label, amount, color, onClick }) => (
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const { selectedDate, setSelectedDate } = useMonth();
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
 

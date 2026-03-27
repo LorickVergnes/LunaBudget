@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Loader2, Trash2, ChevronRight, RotateCw, Info, MoreVertical, Pencil } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
 import MonthSelector from '../../components/layout/MonthSelector';
@@ -17,8 +18,7 @@ const COLORS = ['#F9A825', '#5C6EFF', '#9B5CFF', '#ef4444', '#22c55e', '#06b6d4'
 const Savings = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [selectedDate, setSelectedDate] = useState(new Date(location.state?.date || new Date()));
+  const { selectedDate, setSelectedDate } = useMonth();
   const [savings, setSavings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
