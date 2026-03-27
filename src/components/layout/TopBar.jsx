@@ -11,7 +11,7 @@ const TopBar = ({ title }) => {
   return (
     <div style={{ 
       background: 'white', 
-      paddingTop: 'max(24px, env(safe-area-inset-top, 24px))',
+      paddingTop: 'max(40px, env(safe-area-inset-top, 40px))',
       paddingBottom: '12px',
       paddingLeft: '20px',
       paddingRight: '20px',
