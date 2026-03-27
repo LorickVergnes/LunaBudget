@@ -11,17 +11,23 @@ const DonutChart = ({ segments, total, size = 140, centerLabel = "Total", limit 
 
   return (
     <svg width={size} height={size} viewBox="0 0 140 140">
-      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#EEF2FB" />
+      {/* Background circle (Separator color) */}
+      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#FFFFFF" />
+      
+      {/* Background track (Light gray) if total is 0 or to fill empty space */}
+      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#EEF2FB" strokeDasharray={`0 ${circ}`} />
+
       {processedSegments.map((seg, i) => {
         const pct = processedTotal > 0 ? seg.value / processedTotal : 0;
-        const strokeDasharray = `${pct * circ} ${circ}`;
+        // Subtract a small amount (2px) from the dash length to create the white separator effect
+        const dashLength = Math.max(0, pct * circ - 2);
+        const strokeDasharray = `${dashLength} ${circ}`;
 
         // Calculate offset based on previous segments
         const previousSum = processedSegments.slice(0, i).reduce((a, s) => a + s.value, 0);
         const strokeDashoffset = -(previousSum / processedTotal * circ);
 
         return (
-
           <circle
             key={i}
             cx={cx}
@@ -32,7 +38,7 @@ const DonutChart = ({ segments, total, size = 140, centerLabel = "Total", limit 
             stroke={seg.color}
             strokeDasharray={strokeDasharray}
             strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             style={{ 
               transform: 'rotate(-90deg)', 
               transformOrigin: '70px 70px', 

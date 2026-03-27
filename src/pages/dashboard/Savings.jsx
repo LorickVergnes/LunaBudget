@@ -241,7 +241,6 @@ const Savings = () => {
           <FormCard>
             <ColorPicker 
               value={formData.color} 
-              usedColors={usedColors} 
               onChange={c => setFormData({ ...formData, color: c })} 
             />
           </FormCard>
