@@ -10,6 +10,7 @@ import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 
 const EnvelopeDetail = () => {
@@ -26,6 +27,9 @@ const EnvelopeDetail = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
 
   useEffect(() => { if (user) fetchData(); }, [user, id]);
@@ -58,7 +62,25 @@ const EnvelopeDetail = () => {
     setShowForm(true);
   };
 
-  const del = async (expId) => { await supabase.from('envelope_expenses').delete().eq('id', expId); fetchData(); };
+  const del = (id) => {
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('envelope_expenses').delete().eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+    }
+  };
   const total = expenses.reduce((a, c) => a + parseFloat(c.amount), 0);
 
   return (
@@ -172,6 +194,16 @@ const EnvelopeDetail = () => {
           </button>
         </form>
       </BottomModal>
+
+      <DeleteConfirmationModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onConfirm={confirmDelete}
+        loading={isDeleting}
+        title="Supprimer cette dépense ?"
+        message="Voulez-vous vraiment supprimer cette dépense de l'enveloppe ? Cette action est définitive."
+      />
+
       <BottomNav />
     </div>
   );

@@ -11,6 +11,7 @@ import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 import IconSelector from '../../components/ui/IconSelector';
 import { getIconComponent } from '../../lib/iconRegistry';
@@ -26,6 +27,9 @@ const Savings = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' });
 
   useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
@@ -70,9 +74,25 @@ const Savings = () => {
     setShowForm(true);
   };
 
-  const del = async (e, id) => {
+  const del = (e, id) => {
     e.stopPropagation();
-    if (confirm('Supprimer cet objectif ?')) { await supabase.from('savings').delete().eq('id', id); fetchData(); }
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('savings').delete().eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+    }
   };
 
   const total = savings.reduce((a, c) => a + parseFloat(c.target_amount), 0);
@@ -258,6 +278,16 @@ const Savings = () => {
           </button>
         </form>
       </BottomModal>
+
+      <DeleteConfirmationModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onConfirm={confirmDelete}
+        loading={isDeleting}
+        title="Supprimer cet objectif ?"
+        message="Voulez-vous vraiment supprimer cet objectif d'épargne ? Toutes les entrées liées seront également supprimées."
+      />
+
       <BottomNav />
     </div>
   );

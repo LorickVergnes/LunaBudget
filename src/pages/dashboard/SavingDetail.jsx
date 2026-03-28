@@ -10,6 +10,7 @@ import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 
 const SavingDetail = () => {
@@ -26,6 +27,9 @@ const SavingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ amount: '', date: new Date().toISOString().split('T')[0] });
 
   useEffect(() => { if (user) fetchData(); }, [user, id]);
@@ -57,7 +61,25 @@ const SavingDetail = () => {
     setShowForm(true);
   };
 
-  const del = async (entryId) => { await supabase.from('saving_entries').delete().eq('id', entryId); fetchData(); };
+  const del = (id) => {
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('saving_entries').delete().eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+    }
+  };
   const total = entries.reduce((a, c) => a + parseFloat(c.amount), 0);
 
   return (
@@ -159,6 +181,16 @@ const SavingDetail = () => {
           </button>
         </form>
       </BottomModal>
+
+      <DeleteConfirmationModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onConfirm={confirmDelete}
+        loading={isDeleting}
+        title="Supprimer ce versement ?"
+        message="Voulez-vous vraiment supprimer ce versement de votre épargne ? Cette action est définitive."
+      />
+
       <BottomNav />
     </div>
   );

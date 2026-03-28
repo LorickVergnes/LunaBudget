@@ -5,12 +5,12 @@ import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import BottomModal from '../../components/ui/BottomModal';
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 import IconSelector from '../../components/ui/IconSelector';
 import { getIconComponent } from '../../lib/iconRegistry';
@@ -25,6 +25,9 @@ const Incomes = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Briefcase', color: ALL_COLORS[0]
   });
@@ -63,7 +66,25 @@ const Incomes = () => {
     setShowForm(true);
   };
 
-  const del = async (id) => { await supabase.from('incomes').delete().eq('id', id); fetchData(); };
+  const del = (id) => {
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('incomes').delete().eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+    }
+  };
 
   const total = incomes.reduce((a, c) => a + parseFloat(c.amount), 0);
   const ACCENT = '#5C6EFF';
@@ -234,6 +255,16 @@ const Incomes = () => {
           </button>
         </form>
       </BottomModal>
+
+      <DeleteConfirmationModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onConfirm={confirmDelete}
+        loading={isDeleting}
+        title="Supprimer ce revenu ?"
+        message="Voulez-vous vraiment supprimer ce revenu ? Cette action est définitive."
+      />
+
       <BottomNav />
     </div>
   );

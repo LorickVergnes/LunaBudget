@@ -11,6 +11,7 @@ import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 import IconSelector from '../../components/ui/IconSelector';
 import { getIconComponent } from '../../lib/iconRegistry';
@@ -28,6 +29,9 @@ const Envelopes = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false });
 
   useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
@@ -65,9 +69,25 @@ const Envelopes = () => {
     setShowForm(true);
   };
 
-  const del = async (e, id) => {
+  const del = (e, id) => {
     e.stopPropagation();
-    if (confirm('Supprimer cette enveloppe ?')) { await supabase.from('envelopes').delete().eq('id', id); fetchData(); }
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('envelopes').delete().eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+    }
   };
 
   const totalBudget = envelopes.reduce((a, c) => a + parseFloat(c.max_amount), 0);
@@ -234,6 +254,16 @@ const Envelopes = () => {
           </button>
         </form>
       </BottomModal>
+
+      <DeleteConfirmationModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onConfirm={confirmDelete}
+        loading={isDeleting}
+        title="Supprimer cette enveloppe ?"
+        message="Voulez-vous vraiment supprimer cette enveloppe ? Toutes les dépenses liées seront également supprimées."
+      />
+
       <BottomNav />
     </div>
   );
