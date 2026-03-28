@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
-import { Loader2, TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
+import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
 
@@ -66,12 +67,12 @@ const GlobalView = () => {
     const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expense)), 1);
 
     return (
-        <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+        <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
             <TopBar title="Vue Globale" />
 
             <div style={{ padding: '16px 16px', maxWidth: 480, margin: '0 auto' }}>
                 {loading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Loader2 size={32} style={{ color: '#5C6EFF' }} className="animate-spin" /></div>
+                    <LoadingSpinner />
                 ) : (
                     <>
                         {/* All-time Balance Card */}

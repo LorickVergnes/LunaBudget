@@ -8,6 +8,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getIconComponent } from '../../lib/iconRegistry';
 import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 
@@ -60,7 +61,7 @@ const SavingDetail = () => {
   const total = entries.reduce((a, c) => a + parseFloat(c.amount), 0);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
       <TopBar title={savingName} />
 
       {/* Sub-header for Saving Context */}
@@ -78,7 +79,7 @@ const SavingDetail = () => {
 
       <div style={{ padding: '0px 16px', maxWidth: 480, margin: '0 auto' }}>
         {loading && !showForm ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Loader2 size={32} style={{ color: '#F9A825' }} className="animate-spin" /></div>
+          <LoadingSpinner color="#F9A825" />
         ) : entries.length === 0 ? (
           <div className="card" style={{ padding: '60px 20px', textAlign: 'center', marginTop: 16 }}>
             <HeaderIcon size={40} style={{ color: '#D1D5DB', margin: '0 auto 12px' }} />
@@ -154,7 +155,7 @@ const SavingDetail = () => {
               boxShadow: '0 4px 14px rgba(59,130,246,0.3)', marginTop: 8 
             }}
           >
-            {loading ? <Loader2 size={24} className="animate-spin" /> : editingId ? 'Enregistrer' : 'Confirmer le versement'}
+            {loading ? <Loader2 size={24} className="animate-spin-smooth" /> : editingId ? 'Enregistrer' : 'Confirmer le versement'}
           </button>
         </form>
       </BottomModal>

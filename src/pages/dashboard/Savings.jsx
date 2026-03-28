@@ -9,6 +9,7 @@ import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 import IconSelector from '../../components/ui/IconSelector';
@@ -80,14 +81,14 @@ const Savings = () => {
   const usedColors = savings.filter(s => s.id !== editingId).map(s => s.color);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
       <TopBar title="Épargne" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
         {loading && !showForm ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Loader2 size={32} style={{ color: '#F9A825' }} className="animate-spin" /></div>
+          <LoadingSpinner color="#F9A825" />
         ) : (
           <>
             {/* Summary card */}
@@ -253,7 +254,7 @@ const Savings = () => {
               boxShadow: '0 4px 14px rgba(59,130,246,0.3)', marginTop: 8 
             }}
           >
-            {loading ? <Loader2 size={24} className="animate-spin" /> : editingId ? 'Enregistrer' : 'Créer l\'objectif'}
+            {loading ? <Loader2 size={24} className="animate-spin-smooth" /> : editingId ? 'Enregistrer' : 'Créer l\'objectif'}
           </button>
         </form>
       </BottomModal>

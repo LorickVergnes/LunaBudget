@@ -8,8 +8,9 @@ import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import {
-  CreditCard, Mail, PiggyBank, Loader2, Info, ChevronRight
+  CreditCard, Mail, PiggyBank, Info, ChevronRight
 } from 'lucide-react';
 
 /* ── Semi-donut SVG chart ── */
@@ -108,7 +109,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
       <TopBar title="Vue d'ensemble" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
@@ -120,9 +121,7 @@ const Dashboard = () => {
         </div>
 
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-            <Loader2 size={32} style={{ color: '#5C6EFF' }} className="animate-spin" />
-          </div>
+          <LoadingSpinner />
         ) : (
           <>
             {/* Main budget card */}

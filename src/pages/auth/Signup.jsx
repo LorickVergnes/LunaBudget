@@ -104,7 +104,7 @@ const Signup = () => {
             </div>
             <button type="submit" disabled={loading}
               style={{ background: 'linear-gradient(135deg,#5C6EFF,#9B5CFF)', color: 'white', border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 6px 20px rgba(92,110,255,.4)', marginTop: 4 }}>
-              {loading ? <Loader2 size={20} className="animate-spin" /> : <><span>S'inscrire</span><ArrowRight size={18} /></>}
+              {loading ? <Loader2 size={20} className="animate-spin-smooth" /> : <><span>S'inscrire</span><ArrowRight size={18} /></>}
             </button>
           </form>
         </div>

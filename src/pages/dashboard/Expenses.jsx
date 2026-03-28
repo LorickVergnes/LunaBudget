@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
@@ -70,14 +71,14 @@ const Expenses = () => {
   }));
 
   return (
-    <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
       <TopBar title="Dépenses fixes" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
         {loading && !showForm ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Loader2 size={32} style={{ color: ACCENT }} className="animate-spin" /></div>
+          <LoadingSpinner />
         ) : (
           <>
             {/* Summary card with responsive donut and legend */}
@@ -225,7 +226,7 @@ const Expenses = () => {
               boxShadow: '0 4px 14px rgba(59,130,246,0.3)', marginTop: 8 
             }}
           >
-            {loading ? <Loader2 size={24} className="animate-spin" /> : editingId ? 'Enregistrer' : 'Ajouter'}
+            {loading ? <Loader2 size={24} className="animate-spin-smooth" /> : editingId ? 'Enregistrer' : 'Ajouter'}
           </button>
         </form>
       </BottomModal>

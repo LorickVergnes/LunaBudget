@@ -11,16 +11,12 @@ import Account from './pages/dashboard/Account';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import { useAuth } from './hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import { MonthProvider } from './contexts/MonthContext';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f0f14' }}>
-      <Loader2 className="animate-spin" size={40} style={{ color: '#6366f1' }} />
-    </div>
-  );
+  if (loading) return <LoadingSpinner fullHeight color="#6366f1" />;
   if (!user) return <Navigate to="/login" />;
   return children;
 };

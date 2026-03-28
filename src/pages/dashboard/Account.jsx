@@ -29,7 +29,7 @@ const Account = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
       <TopBar title="Mon Profil" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
@@ -99,7 +99,7 @@ const Account = () => {
                 boxShadow: '0 4px 14px rgba(92,110,255,0.4)', marginTop: 12
               }}
             >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : 'Mettre à jour'}
+              {loading ? <Loader2 size={18} className="animate-spin-smooth" /> : 'Mettre à jour'}
             </button>
           </form>
         </div>
