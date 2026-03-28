@@ -10,42 +10,64 @@ import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import {
-  CreditCard, Mail, PiggyBank, Info, ChevronRight
+  CreditCard, Mail, PiggyBank, Info, ChevronRight, AlertTriangle
 } from 'lucide-react';
 
-/* ── Semi-donut SVG chart ── */
-const SemiDonut = ({ segments, size = 180 }) => {
-  const r = 70, cx = 90, cy = 90;
-  const c = Math.PI * r; // half circle circumference
-  let offset = 0;
-  const total = segments.reduce((a, s) => a + s.value, 0) || 1;
+/* ── Budget Donut SVG chart ── */
+const BudgetDonut = ({ segments, total, size = 150 }) => {
+  const r = 40, cx = 50, cy = 50;
+  const circ = 2 * Math.PI * r; 
+  const normalizedTotal = Math.max(total, 1);
+
   return (
-    <svg width={size} height={size * 0.6} viewBox="0 0 180 100" style={{ overflow: 'visible' }}>
-      {segments.map((seg, i) => {
-        const pct = seg.value / total;
-        const dash = pct * c;
-        const el = (
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none" strokeWidth={18}
-            stroke={seg.color}
-            strokeDasharray={`${dash} ${c - dash}`}
-            strokeDashoffset={-offset}
-            strokeLinecap="round"
-            style={{ transform: 'rotate(-180deg)', transformOrigin: '90px 90px' }}
-          />
-        );
-        offset += dash + 2;
-        return el;
-      })}
-      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={18} stroke="#EEF2FB"
-        style={{ transform: 'rotate(-180deg)', transformOrigin: '90px 90px' }}
-        strokeDasharray={`${c} ${c}`} />
-      {segments.map((seg, i) => {
-        const pct = seg.value / total;
-        const realOffset = segments.slice(0, i).reduce((a, s) => a + (s.value / total) * c + 2, 0);
-        const angle = (realOffset / c) * 180 - 180 + (pct / 2 * 180);
-        return null; // dots could go here
-      })}
-    </svg>
+    <div style={{ position: 'relative', width: size, height: size, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <svg width={size} height={size} viewBox="0 0 100 100">
+        {/* Background track (Light gray) */}
+        <circle 
+          cx={cx} cy={cy} r={r} 
+          fill="none" 
+          stroke="#EEF2FB" 
+          strokeWidth={12} 
+        />
+        
+        {/* Separator background (White) */}
+        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={12} stroke="#FFFFFF" />
+
+        {segments.map((seg, i) => {
+          const pct = seg.value / normalizedTotal;
+          if (pct <= 0) return null;
+          
+          // Subtract small amount to show white separator
+          const dashLength = Math.max(0, pct * circ - 1.5);
+          const previousValue = segments.slice(0, i).reduce((a, s) => a + s.value, 0);
+          const offset = -(previousValue / normalizedTotal * circ);
+
+          return (
+            <circle 
+              key={i} 
+              cx={cx} cy={cy} r={r} 
+              fill="none" 
+              strokeWidth={12}
+              stroke={seg.color}
+              strokeDasharray={`${dashLength} ${circ}`}
+              strokeDashoffset={offset}
+              strokeLinecap="butt"
+              style={{ 
+                transform: 'rotate(-90deg)', 
+                transformOrigin: '50px 50px',
+                transition: 'stroke-dasharray 0.8s ease, stroke-dashoffset 0.8s ease'
+              }}
+            />
+          );
+        })}
+      </svg>
+      {/* Percentage in middle */}
+      <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <span style={{ fontSize: 16, fontWeight: 900, color: '#1a1a2e' }}>
+          {Math.round(segments.reduce((a,s) => a+s.value, 0) / normalizedTotal * 100)}%
+        </span>
+      </div>
+    </div>
   );
 };
 
@@ -156,35 +178,27 @@ const Dashboard = () => {
             {/* Donut chart card */}
             <div className="card fade-up" style={{ padding: '20px', marginTop: 12 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Part des dépenses par rapport aux revenus</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
-                {/* SVG donut */}
-                <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                  <svg width={130} height={80} viewBox="0 0 180 100">
-                    {/* background arc */}
-                    <path d="M 20 90 A 70 70 0 0 1 160 90" fill="none" stroke="#EEF2FB" strokeWidth={18} />
-                    {/* fixed */}
-                    {data.income > 0 && (() => {
-                      const total = data.income;
-                      const fPct = Math.min(data.fixedExp / total, 1);
-                      const ePct = Math.min(data.envExp / total, 1 - fPct);
-                      const sPct = Math.min(data.savings / total, 1 - fPct - ePct);
-                      const arc = (startPct, endPct, color) => {
-                        const r = 70, cx = 90, cy = 90;
-                        const startA = Math.PI + startPct * Math.PI;
-                        const endA = Math.PI + endPct * Math.PI;
-                        const x1 = cx + r * Math.cos(startA), y1 = cy + r * Math.sin(startA);
-                        const x2 = cx + r * Math.cos(endA), y2 = cy + r * Math.sin(endA);
-                        const large = (endPct - startPct) > 0.5 ? 1 : 0;
-                        return <path key={color} d={`M${x1} ${y1} A${r} ${r} 0 ${large} 1 ${x2} ${y2}`} fill="none" stroke={color} strokeWidth={18} strokeLinecap="round" />;
-                      };
-                      return [
-                        arc(0, fPct, '#5C6EFF'),
-                        arc(fPct + 0.02, fPct + ePct, '#9B5CFF'),
-                        arc(fPct + ePct + 0.02, fPct + ePct + sPct, '#F9A825'),
-                      ];
-                    })()}
-                  </svg>
+              
+              {balance < 0 && (
+                <div style={{ 
+                  background: '#FEE2E2', borderRadius: 12, padding: '10px 14px', 
+                  display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
+                  border: '1px solid #FECACA'
+                }}>
+                  <AlertTriangle size={18} style={{ color: '#EF4444' }} />
+                  <p style={{ fontSize: 12, color: '#991B1B', fontWeight: 600 }}>
+                    Attention : Vous dépassez votre budget de {Math.abs(balance).toLocaleString('fr-FR')} €
+                  </p>
                 </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
+                <BudgetDonut 
+                  segments={donutSegments} 
+                  total={data.income || 1} 
+                  size={150} 
+                />
+                
                 <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: '140px' }}>
                   {[
                     { label: 'Fixe', color: '#5C6EFF', val: data.income > 0 ? Math.round(data.fixedExp / data.income * 100) : 0 },
@@ -199,6 +213,16 @@ const Dashboard = () => {
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{item.val}%</span>
                     </div>
                   ))}
+                  {data.income > 0 && (data.fixedExp + data.envExp + data.savings) > data.income && (
+                    <div style={{ borderTop: '1px solid #F5F7FF', paddingTop: 4, marginTop: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 13, color: '#EF4444', fontWeight: 600 }}>Total</span>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: '#EF4444' }}>
+                          {Math.round((data.fixedExp + data.envExp + data.savings) / data.income * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
