@@ -118,11 +118,42 @@ const Dashboard = () => {
   const totalExp = data.fixedExp + data.envExp;
   const balance = data.income - totalExp - data.savings;
 
-  // Days remaining in month
+  // Logic for coaching message
   const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft = lastDay - now.getDate();
-  const perDay = daysLeft > 0 ? balance / daysLeft : 0;
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const viewingMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  
+  const isCurrentMonth = currentMonth.getTime() === viewingMonth.getTime();
+  const isPastMonth = viewingMonth.getTime() < currentMonth.getTime();
+  const isFutureMonth = viewingMonth.getTime() > currentMonth.getTime();
+
+  let tipMessage = null;
+  
+  if (isCurrentMonth) {
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysLeft = Math.max(lastDayOfMonth - now.getDate() + 1, 1); // includes today
+    
+    if (balance >= 0) {
+      const perDay = balance / daysLeft;
+      tipMessage = (
+        <>Il vous reste <strong style={{ color: '#22c55e' }}>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong> par jour pour finir sereinement les <strong>{daysLeft}</strong> derniers jours du mois.</>
+      );
+    } else {
+      tipMessage = (
+        <>Budget dépassé de <strong style={{ color: '#ef4444' }}>{Math.abs(balance).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>. Attention, il reste <strong>{daysLeft} jours</strong> : essayez de limiter les dépenses non essentielles.</>
+      );
+    }
+  } else if (isPastMonth) {
+    tipMessage = (
+      <>Bilan : Ce mois s'est terminé avec un solde de <strong style={{ color: balance >= 0 ? '#22c55e' : '#ef4444' }}>{balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>. {balance >= 0 ? "Bravo !" : "On fera mieux le mois prochain !"}</>
+    );
+  } else if (isFutureMonth) {
+    const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+    const perDay = balance / daysInMonth;
+    tipMessage = (
+      <>Prévision : Pour ce mois, vous disposerez d'un budget quotidien de <strong style={{ color: balance >= 0 ? '#22c55e' : '#ef4444' }}>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>.</>
+    );
+  }
 
   const donutSegments = [
     { color: '#5C6EFF', value: data.fixedExp },
@@ -170,8 +201,7 @@ const Dashboard = () => {
                 <Info size={18} style={{ color: '#5C6EFF' }} />
               </div>
               <p style={{ fontSize: 13, fontWeight: 500, color: '#555', lineHeight: 1.5 }}>
-                Il reste <strong style={{ color: '#ef4444' }}>{daysLeft} jours</strong> avant la fin du mois &{' '}
-                <strong style={{ color: '#22c55e' }}>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong> à dépenser par jour !
+                {tipMessage}
               </p>
             </div>
 
