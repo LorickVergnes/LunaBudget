@@ -29,6 +29,7 @@ const GlobalView = () => {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
             const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const currentMonthStrFull = formatMonthDate(now);
 
             const currentMonthStr = formatMonthDate(selectedDate);
             const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
@@ -40,29 +41,41 @@ const GlobalView = () => {
                 supabase.from('saving_entries').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
             ]);
 
-            const filterReal = (list, key = 'date') => (list || []).filter(item => {
-                if (showForecast) return true;
-                const itemMonth = new Date(item.month_date + "-01");
-                if (itemMonth < currentMonthStart) return true;
-                if (itemMonth > currentMonthStart) return false;
-                return item[key] <= todayStr;
-            });
+            const getMonthlyTotals = (monthStr, isForecastActive) => {
+                const isThisMonth = monthStr === currentMonthStrFull;
+                const isPastMonth = new Date(monthStr + "-01") < currentMonthStart;
+                
+                // Even if toggle is ON, we only use Forecast logic for the CURRENT month
+                const useForecastLogic = isForecastActive && isThisMonth;
 
-            const incomesSum = filterReal(allInc).reduce((a, c) => a + parseFloat(c.amount), 0);
-            
-            // Calculate Total Expenses for the All-time balance
-            const expensesSum = filterReal(allExp).reduce((a, c) => a + parseFloat(c.amount), 0)
-                + (showForecast 
-                    ? (allEnvs || []).reduce((a, c) => a + parseFloat(c.max_amount), 0)
-                    : filterReal(allEnvExp).reduce((a, c) => a + parseFloat(c.amount), 0)
-                  )
-                + (showForecast 
-                    ? (allSav || []).reduce((a, c) => a + parseFloat(c.target_amount), 0)
-                    : filterReal(allSavEntries).reduce((a, c) => a + parseFloat(c.amount), 0)
-                  );
-            
-            setAllTimeBalance(incomesSum - expensesSum);
+                const mInc = (allInc || []).filter(x => x.month_date === monthStr);
+                const mExp = (allExp || []).filter(x => x.month_date === monthStr);
+                const mEnvExp = (allEnvExp || []).filter(x => x.month_date === monthStr);
+                const mEnvs = (allEnvs || []).filter(x => x.month_date === monthStr);
+                const mSav = (allSav || []).filter(x => x.month_date === monthStr);
+                const mSavEnt = (allSavEntries || []).filter(x => x.month_date === monthStr);
 
+                const filterReal = (list, key = 'date') => list.filter(item => {
+                    if (isPastMonth) return true;
+                    return item[key] <= todayStr;
+                });
+
+                const income = (useForecastLogic ? mInc : filterReal(mInc)).reduce((a, c) => a + parseFloat(c.amount), 0);
+                
+                const expense = (useForecastLogic ? mExp : filterReal(mExp)).reduce((a, c) => a + parseFloat(c.amount), 0)
+                    + (useForecastLogic 
+                        ? mEnvs.reduce((a, c) => a + parseFloat(c.max_amount), 0)
+                        : filterReal(mEnvExp).reduce((a, c) => a + parseFloat(c.amount), 0)
+                      )
+                    + (useForecastLogic 
+                        ? mSav.reduce((a, c) => a + parseFloat(c.target_amount), 0)
+                        : filterReal(mSavEnt).reduce((a, c) => a + parseFloat(c.amount), 0)
+                      );
+
+                return { income, expense };
+            };
+
+            // Calculate historical list (6 months)
             const result = [];
             for (let i = 5; i >= 0; i--) {
                 const d = new Date(selectedDate);
@@ -70,27 +83,29 @@ const GlobalView = () => {
                 const str = formatMonthDate(d);
                 const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
                 
-                const mInc = (allInc || []).filter(x => x.month_date === str);
-                const mExp = (allExp || []).filter(x => x.month_date === str);
-                const mEnvExp = (allEnvExp || []).filter(x => x.month_date === str);
-                const mEnvs = (allEnvs || []).filter(x => x.month_date === str);
-                const mSav = (allSav || []).filter(x => x.month_date === str);
-                const mSavEnt = (allSavEntries || []).filter(x => x.month_date === str);
-
-                const income = filterReal(mInc).reduce((a, c) => a + parseFloat(c.amount), 0);
-                const expense = filterReal(mExp).reduce((a, c) => a + parseFloat(c.amount), 0)
-                    + (showForecast 
-                        ? mEnvs.reduce((a, c) => a + parseFloat(c.max_amount), 0)
-                        : filterReal(mEnvExp).reduce((a, c) => a + parseFloat(c.amount), 0)
-                      )
-                    + (showForecast 
-                        ? mSav.reduce((a, c) => a + parseFloat(c.target_amount), 0)
-                        : filterReal(mSavEnt).reduce((a, c) => a + parseFloat(c.amount), 0)
-                      );
-                
+                const { income, expense } = getMonthlyTotals(str, showForecast);
                 result.push({ label, income, expense, balance: income - expense });
             }
             setMonths(result);
+
+            // Calculate All-Time Balance based on the same logic (Past = Real, Current = Toggle)
+            // We need to iterate through all unique months in the data
+            const allMonths = [...new Set([
+                ...(allInc||[]).map(x => x.month_date),
+                ...(allExp||[]).map(x => x.month_date),
+                ...(allSav||[]).map(x => x.month_date)
+            ])].sort();
+
+            let totalIncomesSum = 0;
+            let totalExpensesSum = 0;
+            allMonths.forEach(mStr => {
+                const { income, expense } = getMonthlyTotals(mStr, showForecast);
+                totalIncomesSum += income;
+                totalExpensesSum += expense;
+            });
+            
+            setAllTimeBalance(totalIncomesSum - totalExpensesSum);
+
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
