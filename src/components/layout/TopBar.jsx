@@ -27,11 +27,14 @@ const TopBar = ({ title }) => {
       <Link to="/account" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', flexShrink: 0, width: '30%' }}>
         <div style={{ 
           width: 36, height: 36, 
+          minWidth: 36, minHeight: 36,
           borderRadius: '50%', 
           background: 'linear-gradient(135deg,#9B5CFF,#5C6EFF)', 
-          display: 'flex', alignItems: 'center', justifyContent: 'center' 
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+          aspectRatio: '1/1'
         }}>
-          <span style={{ fontSize: 16, color: 'white' }}>{displayName.charAt(0).toUpperCase()}</span>
+          <span style={{ fontSize: 16, color: 'white', lineHeight: 0 }}>{displayName.charAt(0).toUpperCase()}</span>
         </div>
         <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {displayName}
