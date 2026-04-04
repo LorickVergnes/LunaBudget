@@ -14,31 +14,53 @@ const GlobalView = () => {
     const [loading, setLoading] = useState(true);
     const [months, setMonths] = useState([]);
     const [allTimeBalance, setAllTimeBalance] = useState(0);
+    const [showForecast, setShowForecast] = useState(false);
 
+    // Reset to current month on mount
     useEffect(() => {
         setSelectedDate(new Date());
     }, []);
 
-    useEffect(() => { if (user) fetchGlobal(); }, [user, selectedDate]);
+    useEffect(() => { if (user) fetchGlobal(); }, [user, selectedDate, showForecast]);
 
     const fetchGlobal = async () => {
         setLoading(true);
         try {
-            // Fetch All Time Data (up to current month only)
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
             const currentMonthStr = formatMonthDate(selectedDate);
-            const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allSav }] = await Promise.all([
-                supabase.from('incomes').select('amount').eq('user_id', user.id).lte('month_date', currentMonthStr),
-                supabase.from('expenses').select('amount').eq('user_id', user.id).lte('month_date', currentMonthStr),
-                supabase.from('envelope_expenses').select('amount').eq('user_id', user.id).lte('month_date', currentMonthStr),
-                supabase.from('savings').select('target_amount').eq('user_id', user.id).lte('month_date', currentMonthStr),
+            const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
+                supabase.from('incomes').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('expenses').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('envelope_expenses').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('envelopes').select('max_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('saving_entries').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
             ]);
 
-            let incomesSum = 0;
-            let expensesSum = 0;
-            if (allInc) incomesSum += allInc.reduce((a, c) => a + parseFloat(c.amount), 0);
-            if (allExp) expensesSum += allExp.reduce((a, c) => a + parseFloat(c.amount), 0);
-            if (allEnvExp) expensesSum += allEnvExp.reduce((a, c) => a + parseFloat(c.amount), 0);
-            if (allSav) expensesSum += allSav.reduce((a, c) => a + parseFloat(c.target_amount), 0);
+            const filterReal = (list, key = 'date') => (list || []).filter(item => {
+                if (showForecast) return true;
+                const itemMonth = new Date(item.month_date + "-01");
+                if (itemMonth < currentMonthStart) return true;
+                if (itemMonth > currentMonthStart) return false;
+                return item[key] <= todayStr;
+            });
+
+            const incomesSum = filterReal(allInc).reduce((a, c) => a + parseFloat(c.amount), 0);
+            
+            // Calculate Total Expenses for the All-time balance
+            const expensesSum = filterReal(allExp).reduce((a, c) => a + parseFloat(c.amount), 0)
+                + (showForecast 
+                    ? (allEnvs || []).reduce((a, c) => a + parseFloat(c.max_amount), 0)
+                    : filterReal(allEnvExp).reduce((a, c) => a + parseFloat(c.amount), 0)
+                  )
+                + (showForecast 
+                    ? (allSav || []).reduce((a, c) => a + parseFloat(c.target_amount), 0)
+                    : filterReal(allSavEntries).reduce((a, c) => a + parseFloat(c.amount), 0)
+                  );
+            
             setAllTimeBalance(incomesSum - expensesSum);
 
             const result = [];
@@ -47,16 +69,25 @@ const GlobalView = () => {
                 d.setMonth(d.getMonth() - i);
                 const str = formatMonthDate(d);
                 const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-                const [{ data: inc }, { data: exp }, { data: envExp }, { data: sav }] = await Promise.all([
-                    supabase.from('incomes').select('amount').eq('user_id', user.id).eq('month_date', str),
-                    supabase.from('expenses').select('amount').eq('user_id', user.id).eq('month_date', str),
-                    supabase.from('envelope_expenses').select('amount').eq('user_id', user.id).eq('month_date', str),
-                    supabase.from('savings').select('target_amount').eq('user_id', user.id).eq('month_date', str),
-                ]);
-                const income = (inc || []).reduce((a, c) => a + parseFloat(c.amount), 0);
-                const expense = (exp || []).reduce((a, c) => a + parseFloat(c.amount), 0)
-                    + (envExp || []).reduce((a, c) => a + parseFloat(c.amount), 0)
-                    + (sav || []).reduce((a, c) => a + parseFloat(c.target_amount), 0);
+                
+                const mInc = (allInc || []).filter(x => x.month_date === str);
+                const mExp = (allExp || []).filter(x => x.month_date === str);
+                const mEnvExp = (allEnvExp || []).filter(x => x.month_date === str);
+                const mEnvs = (allEnvs || []).filter(x => x.month_date === str);
+                const mSav = (allSav || []).filter(x => x.month_date === str);
+                const mSavEnt = (allSavEntries || []).filter(x => x.month_date === str);
+
+                const income = filterReal(mInc).reduce((a, c) => a + parseFloat(c.amount), 0);
+                const expense = filterReal(mExp).reduce((a, c) => a + parseFloat(c.amount), 0)
+                    + (showForecast 
+                        ? mEnvs.reduce((a, c) => a + parseFloat(c.max_amount), 0)
+                        : filterReal(mEnvExp).reduce((a, c) => a + parseFloat(c.amount), 0)
+                      )
+                    + (showForecast 
+                        ? mSav.reduce((a, c) => a + parseFloat(c.target_amount), 0)
+                        : filterReal(mSavEnt).reduce((a, c) => a + parseFloat(c.amount), 0)
+                      );
+                
                 result.push({ label, income, expense, balance: income - expense });
             }
             setMonths(result);
@@ -75,6 +106,37 @@ const GlobalView = () => {
             <TopBar title="Vue Globale" />
 
             <div style={{ padding: '16px 16px', maxWidth: 480, margin: '0 auto' }}>
+                {/* Toggle Réel vs Prévisions */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                    <div style={{ 
+                        background: 'white', borderRadius: 14, padding: 4, 
+                        display: 'flex', gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' 
+                    }}>
+                        <button 
+                            onClick={() => setShowForecast(false)}
+                            style={{ 
+                                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                                cursor: 'pointer', transition: 'all 0.2s',
+                                background: !showForecast ? '#5C6EFF' : 'transparent',
+                                color: !showForecast ? 'white' : '#B0B8C9'
+                            }}
+                        >
+                            Réel
+                        </button>
+                        <button 
+                            onClick={() => setShowForecast(true)}
+                            style={{ 
+                                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                                cursor: 'pointer', transition: 'all 0.2s',
+                                background: showForecast ? '#5C6EFF' : 'transparent',
+                                color: showForecast ? 'white' : '#B0B8C9'
+                            }}
+                        >
+                            Prévisions
+                        </button>
+                    </div>
+                </div>
+
                 {loading ? (
                     <LoadingSpinner />
                 ) : (

@@ -28,6 +28,7 @@ const Incomes = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showForecast, setShowForecast] = useState(false);
   const [formData, setFormData] = useState({
     name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Briefcase', color: ALL_COLORS[0]
   });
@@ -45,6 +46,23 @@ const Incomes = () => {
       if (!error) setIncomes(data || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
+
+  // --- LOGIQUE DE FILTRAGE RÉEL VS PRÉVISIONS ---
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
+  const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const filteredIncomes = incomes.filter(inc => {
+    if (showForecast) return true; // En mode prévision, on montre tout
+    if (isPastMonth) return true;  // Mois passé, tout est réel
+    if (isFutureMonth) return false; // Mois futur, rien n'est encore réel
+    return inc.date <= todayStr;    // Mois en cours, seulement jusqu'à aujourd'hui
+  });
+
+  const total = filteredIncomes.reduce((a, c) => a + parseFloat(c.amount), 0);
+  const totalForecast = incomes.reduce((a, c) => a + parseFloat(c.amount), 0);
+  // ----------------------------------------------
 
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
@@ -86,10 +104,9 @@ const Incomes = () => {
     }
   };
 
-  const total = incomes.reduce((a, c) => a + parseFloat(c.amount), 0);
   const ACCENT = '#5C6EFF';
 
-  const donutSegments = incomes.map(inc => ({
+  const donutSegments = filteredIncomes.map(inc => ({
     value: parseFloat(inc.amount),
     color: inc.color || ACCENT
   }));
@@ -101,6 +118,37 @@ const Incomes = () => {
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
+        {/* Toggle Réel vs Prévisions */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <div style={{ 
+            background: 'white', borderRadius: 14, padding: 4, 
+            display: 'flex', gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' 
+          }}>
+            <button 
+              onClick={() => setShowForecast(false)}
+              style={{ 
+                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: !showForecast ? '#5C6EFF' : 'transparent',
+                color: !showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Réel
+            </button>
+            <button 
+              onClick={() => setShowForecast(true)}
+              style={{ 
+                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: showForecast ? '#5C6EFF' : 'transparent',
+                color: showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Prévisions
+            </button>
+          </div>
+        </div>
+
         {loading && !showForm ? (
           <LoadingSpinner />
         ) : (
@@ -108,14 +156,19 @@ const Incomes = () => {
             {/* Donut + legend */}
             <div className="card fade-up" style={{ padding: '20px', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#B0B8C9', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#B0B8C9', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {showForecast ? 'Total Prévu' : 'Total Réel'}
+                </span>
                 <span style={{ fontSize: 22, fontWeight: 900, color: '#1a1a2e' }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
+                {!showForecast && totalForecast > total && (
+                  <span style={{ fontSize: 11, color: '#B0B8C9', marginTop: 4 }}>Sur {totalForecast.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} € prévus</span>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <DonutChart segments={donutSegments} total={total || 1} size={120} />
               </div>
               <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px' }}>
-                {incomes.slice(0, 3).map(inc => (
+                {filteredIncomes.slice(0, 3).map(inc => (
                   <div key={inc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: inc.color || ACCENT, flexShrink: 0 }} />
@@ -138,13 +191,28 @@ const Incomes = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {incomes.map((inc, i) => {
                     const IC = getIconComponent(inc.icon);
+                    const isUpcoming = inc.date > todayStr && !isPastMonth;
+                    const isHidden = !showForecast && isUpcoming;
+
                     return (
-                      <div key={inc.id} className="card fade-up" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, animationDelay: `${i * 40}ms` }}>
+                      <div 
+                        key={inc.id} 
+                        className="card fade-up" 
+                        style={{ 
+                          padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, 
+                          animationDelay: `${i * 40}ms`,
+                          opacity: isUpcoming ? 0.6 : 1,
+                          background: isHidden ? 'rgba(255,255,255,0.4)' : 'white',
+                          border: isUpcoming ? '1px dashed #E8ECFF' : 'none'
+                        }}
+                      >
                         <div style={{ width: 44, height: 44, borderRadius: '50%', background: `${inc.color || ACCENT}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <IC size={20} style={{ color: inc.color || ACCENT }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{inc.name}</p>
+                          <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>
+                            {inc.name} {isUpcoming && <span style={{ fontSize: 10, color: '#9B5CFF', fontWeight: 600, marginLeft: 4 }}>(Prévu)</span>}
+                          </p>
                           <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
                             {parseFloat(inc.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {new Date(inc.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                           </p>

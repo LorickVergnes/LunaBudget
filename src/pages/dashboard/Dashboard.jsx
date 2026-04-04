@@ -91,7 +91,9 @@ const Dashboard = () => {
   const { selectedDate, setSelectedDate } = useMonth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [showForecast, setShowForecast] = useState(false);
   const [data, setData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
+  const [forecastData, setForecastData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
 
   useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
 
@@ -100,23 +102,55 @@ const Dashboard = () => {
     try {
       await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
       const monthStr = formatMonthDate(selectedDate);
-      const [{ data: inc }, { data: exp }, { data: envExp }, { data: sav }] = await Promise.all([
-        supabase.from('incomes').select('amount').eq('user_id', user.id).eq('month_date', monthStr),
-        supabase.from('expenses').select('amount').eq('user_id', user.id).eq('month_date', monthStr),
-        supabase.from('envelope_expenses').select('amount').eq('user_id', user.id).eq('month_date', monthStr),
-        supabase.from('savings').select('target_amount').eq('user_id', user.id).eq('month_date', monthStr),
+      const [{ data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }] = await Promise.all([
+        supabase.from('incomes').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
+        supabase.from('expenses').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
+        supabase.from('envelope_expenses').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
+        supabase.from('envelopes').select('max_amount').eq('user_id', user.id).eq('month_date', monthStr),
+        supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).eq('month_date', monthStr),
+        supabase.from('saving_entries').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
       ]);
-      const income = (inc || []).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const fixedExp = (exp || []).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const envExpA = (envExp || []).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const savings = (sav || []).reduce((a, c) => a + parseFloat(c.target_amount), 0);
-      setData({ income, fixedExp, envExp: envExpA, savings });
+
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
+      const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const filterReal = (list, key = 'date') => (list || []).filter(item => {
+        if (isPastMonth) return true;
+        if (isFutureMonth) return false;
+        return item[key] <= todayStr;
+      });
+
+      // Income
+      const totalIncForecast = (inc || []).reduce((a, c) => a + parseFloat(c.amount), 0);
+      const totalIncReal = filterReal(inc).reduce((a, c) => a + parseFloat(c.amount), 0);
+
+      // Fixed Exp
+      const totalFixedForecast = (exp || []).reduce((a, c) => a + parseFloat(c.amount), 0);
+      const totalFixedReal = filterReal(exp).reduce((a, c) => a + parseFloat(c.amount), 0);
+
+      // Env Exp
+      // Forecast: Total allocated to envelopes (max_amount)
+      const totalEnvForecast = (envs || []).reduce((a, c) => a + parseFloat(c.max_amount), 0);
+      // Real: Actual expenses recorded
+      const totalEnvReal = filterReal(envExp).reduce((a, c) => a + parseFloat(c.amount), 0);
+
+      // Savings
+      // Forecast uses the objectives (target_amount)
+      const totalSavForecast = (sav || []).reduce((a, c) => a + parseFloat(c.target_amount), 0);
+      // Real uses actual entries (deposits)
+      const totalSavReal = filterReal(savEntries).reduce((a, c) => a + parseFloat(c.amount), 0);
+
+      setForecastData({ income: totalIncForecast, fixedExp: totalFixedForecast, envExp: totalEnvForecast, savings: totalSavForecast });
+      setData({ income: totalIncReal, fixedExp: totalFixedReal, envExp: totalEnvReal, savings: totalSavReal });
+
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  const totalExp = data.fixedExp + data.envExp;
-  const balance = data.income - totalExp - data.savings;
+  const activeData = showForecast ? forecastData : data;
+  const balance = activeData.income - (activeData.fixedExp + activeData.envExp) - activeData.savings;
 
   // Logic for coaching message
   const now = new Date();
@@ -131,17 +165,22 @@ const Dashboard = () => {
   
   if (isCurrentMonth) {
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = Math.max(lastDayOfMonth - now.getDate() + 1, 1); // includes today
+    const daysLeft = Math.max(lastDayOfMonth - now.getDate() + 1, 1); 
     
-    if (balance >= 0) {
-      const perDay = balance / daysLeft;
-      tipMessage = (
-        <>Il vous reste <strong style={{ color: '#22c55e' }}>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong> par jour pour finir sereinement les <strong>{daysLeft}</strong> derniers jours du mois.</>
-      );
+    if (showForecast) {
+      const perDay = (forecastData.income - forecastData.fixedExp - forecastData.envExp - forecastData.savings) / 30;
+      tipMessage = <>Prévisionnel : Vous devriez finir le mois avec environ <strong>{balance.toLocaleString('fr-FR')} €</strong> soit <strong>{perDay.toFixed(2)} €</strong>/jour en moyenne.</>;
     } else {
-      tipMessage = (
-        <>Budget dépassé de <strong style={{ color: '#ef4444' }}>{Math.abs(balance).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>. Attention, il reste <strong>{daysLeft} jours</strong> : essayez de limiter les dépenses non essentielles.</>
-      );
+      if (balance >= 0) {
+        const perDay = balance / daysLeft;
+        tipMessage = (
+          <>Il vous reste <strong style={{ color: '#22c55e' }}>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong> par jour pour finir sereinement les <strong>{daysLeft}</strong> derniers jours du mois.</>
+        );
+      } else {
+        tipMessage = (
+          <>Budget dépassé de <strong style={{ color: '#ef4444' }}>{Math.abs(balance).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>. Attention, il reste <strong>{daysLeft} jours</strong> : essayez de limiter les dépenses non essentielles.</>
+        );
+      }
     }
   } else if (isPastMonth) {
     tipMessage = (
@@ -156,9 +195,9 @@ const Dashboard = () => {
   }
 
   const donutSegments = [
-    { color: '#5C6EFF', value: data.fixedExp },
-    { color: '#9B5CFF', value: data.envExp },
-    { color: '#F9A825', value: data.savings },
+    { color: '#5C6EFF', value: activeData.fixedExp },
+    { color: '#9B5CFF', value: activeData.envExp },
+    { color: '#F9A825', value: activeData.savings },
   ];
 
   return (
@@ -169,8 +208,40 @@ const Dashboard = () => {
         {/* Month selector */}
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
+        {/* Toggle Réel vs Prévisions */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16, marginBottom: 16 }}>
+          <div style={{ 
+            background: 'white', borderRadius: 14, padding: 4, 
+            display: 'flex', gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            border: '1px solid #E8ECFF'
+          }}>
+            <button 
+              onClick={() => setShowForecast(false)}
+              style={{ 
+                border: 'none', padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: !showForecast ? '#5C6EFF' : 'transparent',
+                color: !showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Réel
+            </button>
+            <button 
+              onClick={() => setShowForecast(true)}
+              style={{ 
+                border: 'none', padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: showForecast ? '#5C6EFF' : 'transparent',
+                color: showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Prévisions
+            </button>
+          </div>
+        </div>
+
         <div style={{ textAlign: 'center', marginTop: 18, marginBottom: 6 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e' }}>Budget</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e' }}>Budget {showForecast ? 'Prévisionnel' : 'Réel'}</span>
         </div>
 
         {loading ? (
@@ -180,15 +251,15 @@ const Dashboard = () => {
             {/* Main budget card */}
             <div className="card fade-up" style={{ padding: '20px', marginTop: 8 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>Entrées et sorties d'argent</p>
-              <BudgetRow icon={CreditCard} label="Revenus" amount={data.income} color="#5C6EFF" onClick={() => navigate('/incomes', { state: { date: selectedDate } })} />
-              <BudgetRow icon={CreditCard} label="Dépenses fixes" amount={data.fixedExp} color="#9B5CFF" onClick={() => navigate('/expenses', { state: { date: selectedDate } })} />
-              <BudgetRow icon={Mail} label="Dépenses enveloppes" amount={data.envExp} color="#5CBEFF" onClick={() => navigate('/envelopes', { state: { date: selectedDate } })} />
-              <BudgetRow icon={PiggyBank} label="Épargne" amount={data.savings} color="#F9A825" onClick={() => navigate('/savings', { state: { date: selectedDate } })} />
+              <BudgetRow icon={CreditCard} label="Revenus" amount={activeData.income} color="#5C6EFF" onClick={() => navigate('/incomes', { state: { date: selectedDate } })} />
+              <BudgetRow icon={CreditCard} label="Dépenses fixes" amount={activeData.fixedExp} color="#9B5CFF" onClick={() => navigate('/expenses', { state: { date: selectedDate } })} />
+              <BudgetRow icon={Mail} label="Dépenses enveloppes" amount={activeData.envExp} color="#5CBEFF" onClick={() => navigate('/envelopes', { state: { date: selectedDate } })} />
+              <BudgetRow icon={PiggyBank} label="Épargne" amount={activeData.savings} color="#F9A825" onClick={() => navigate('/savings', { state: { date: selectedDate } })} />
               <div style={{ display: 'flex', alignItems: 'center', paddingTop: 14, borderTop: '2px solid #EEF2FB' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: '#E8FFE8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
                   <span style={{ fontSize: 18 }}>💳</span>
                 </div>
-                <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: '#1a1a2e' }}>Restant réel</span>
+                <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: '#1a1a2e' }}>Restant {showForecast ? 'Prévu' : 'Réel'}</span>
                 <span style={{ fontSize: 16, fontWeight: 800, color: balance >= 0 ? '#22c55e' : '#ef4444' }}>
                   {balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
                 </span>
