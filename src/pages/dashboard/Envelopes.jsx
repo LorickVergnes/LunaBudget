@@ -94,15 +94,13 @@ const Envelopes = () => {
   const totalSpent = envelopes.reduce((a, c) => a + c.spent, 0);
   const totalLeft = Math.max(totalBudget - totalSpent, 0);
 
-  const usedColors = envelopes.filter(env => env.id !== editingId).map(env => env.color);
-
   const donutSegments = envelopes.map(env => ({
     value: env.spent,
     color: env.color || ACCENT
   }));
 
   return (
-    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
       <TopBar title="Dépenses variables" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>

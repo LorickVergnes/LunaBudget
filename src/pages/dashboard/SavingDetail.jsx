@@ -83,7 +83,7 @@ const SavingDetail = () => {
   const total = entries.reduce((a, c) => a + parseFloat(c.amount), 0);
 
   return (
-    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
       <TopBar title={savingName} />
 
       {/* Sub-header for Saving Context */}

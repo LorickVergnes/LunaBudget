@@ -101,7 +101,7 @@ const Savings = () => {
   const usedColors = savings.filter(s => s.id !== editingId).map(s => s.color);
 
   return (
-    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
       <TopBar title="Épargne" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>

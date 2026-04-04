@@ -5,7 +5,6 @@ import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
 import MonthSelector from '../../components/layout/MonthSelector';
@@ -17,7 +16,6 @@ import IconSelector from '../../components/ui/IconSelector';
 import { getIconComponent } from '../../lib/iconRegistry';
 import DonutChart from '../../components/ui/DonutChart';
 import ColorPicker from '../../components/ui/ColorPicker';
-import { ALL_COLORS } from '../../lib/colorUtils';
 
 const ACCENT = '#9B5CFF';
 
@@ -85,15 +83,13 @@ const Expenses = () => {
   };
   const total = expenses.reduce((a, c) => a + parseFloat(c.amount), 0);
 
-  const usedColors = expenses.filter(exp => exp.id !== editingId).map(exp => exp.color);
-
   const donutSegments = expenses.map(exp => ({
     value: parseFloat(exp.amount),
     color: exp.color || ACCENT
   }));
 
   return (
-    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
       <TopBar title="Dépenses fixes" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
