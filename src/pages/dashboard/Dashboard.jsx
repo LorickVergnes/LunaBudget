@@ -103,11 +103,11 @@ const Dashboard = () => {
       await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
       const monthStr = formatMonthDate(selectedDate);
       const [{ data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }] = await Promise.all([
-        supabase.from('incomes').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
-        supabase.from('expenses').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
+        supabase.from('incomes').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('expenses').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
         supabase.from('envelope_expenses').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
-        supabase.from('envelopes').select('max_amount').eq('user_id', user.id).eq('month_date', monthStr),
-        supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).eq('month_date', monthStr),
+        supabase.from('envelopes').select('max_amount').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
         supabase.from('saving_entries').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
       ]);
 

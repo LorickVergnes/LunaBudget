@@ -1,8 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Trash2, AlertTriangle, CalendarOff, Calendar } from 'lucide-react';
 
-const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, loading }) => {
+const DeleteConfirmationModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  onConfirmAlternative, // Pour le "Supprimer ce mois uniquement"
+  title, 
+  message, 
+  loading,
+  isRecurrent = false // Affiche les options de récurrence si vrai
+}) => {
   const [show, setShow] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -120,27 +129,59 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, l
         
         {/* Title & Message */}
         <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', textAlign: 'center', marginBottom: 12 }}>
-          {title || "Confirmation de suppression"}
+          {title || "Confirmation"}
         </h2>
         <p style={{ fontSize: 16, color: '#6B7280', textAlign: 'center', marginBottom: 32, lineHeight: 1.5 }}>
-          {message || "Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible."}
+          {message || "Que souhaitez-vous faire ? Cette action est irréversible."}
         </p>
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, touchAction: 'auto' }}>
-          <button 
-            onClick={onConfirm}
-            disabled={loading}
-            style={{ 
-              background: '#EF4444', color: 'white', border: 'none', borderRadius: 16, 
-              padding: '16px', fontSize: 16, fontWeight: 700, cursor: 'pointer', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: '0 4px 14px rgba(239,68,68,0.3)'
-            }}
-          >
-            {loading ? <span className="animate-spin-smooth">⏳</span> : <Trash2 size={20} />}
-            {loading ? 'Suppression...' : 'Supprimer'}
-          </button>
+          
+          {isRecurrent ? (
+            <>
+              <button 
+                onClick={onConfirmAlternative}
+                disabled={loading}
+                style={{ 
+                  background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 16, 
+                  padding: '16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10
+                }}
+              >
+                <CalendarOff size={20} />
+                Supprimer ce mois uniquement
+              </button>
+
+              <button 
+                onClick={onConfirm}
+                disabled={loading}
+                style={{ 
+                  background: '#EF4444', color: 'white', border: 'none', borderRadius: 16, 
+                  padding: '16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  boxShadow: '0 4px 14px rgba(239,68,68,0.3)'
+                }}
+              >
+                <Trash2 size={20} />
+                Arrêter la récurrence
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={onConfirm}
+              disabled={loading}
+              style={{ 
+                background: '#EF4444', color: 'white', border: 'none', borderRadius: 16, 
+                padding: '16px', fontSize: 16, fontWeight: 700, cursor: 'pointer', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: '0 4px 14px rgba(239,68,68,0.3)'
+              }}
+            >
+              {loading ? <span className="animate-spin-smooth">⏳</span> : <Trash2 size={20} />}
+              {loading ? 'Suppression...' : 'Supprimer'}
+            </button>
+          )}
           
           <button 
             onClick={handleClose}

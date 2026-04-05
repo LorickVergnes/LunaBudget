@@ -42,7 +42,10 @@ const Incomes = () => {
     try {
       await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
       const { data, error } = await supabase.from('incomes').select('*')
-        .eq('month_date', formatMonthDate(selectedDate)).order('date', { ascending: false });
+        .eq('user_id', user.id)
+        .eq('month_date', formatMonthDate(selectedDate))
+        .eq('is_hidden', false) 
+        .order('date', { ascending: false });
       if (!error) setIncomes(data || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -54,16 +57,16 @@ const Incomes = () => {
   const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
 
   const filteredIncomes = incomes.filter(inc => {
-    if (showForecast) return true; // En mode prévision, on montre tout
-    if (isPastMonth) return true;  // Mois passé, tout est réel
-    if (isFutureMonth) return false; // Mois futur, rien n'est encore réel
-    return inc.date <= todayStr;    // Mois en cours, seulement jusqu'à aujourd'hui
+    if (showForecast) return true; 
+    if (isPastMonth) return true;  
+    if (isFutureMonth) return false; 
+    return inc.date <= todayStr;    
   });
 
   const total = filteredIncomes.reduce((a, c) => a + parseFloat(c.amount), 0);
   const totalForecast = incomes.reduce((a, c) => a + parseFloat(c.amount), 0);
   // ----------------------------------------------
-
+  
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
     const data = { ...formData, amount: parseFloat(formData.amount), user_id: user.id, month_date: formatMonthDate(selectedDate) };
@@ -84,10 +87,13 @@ const Incomes = () => {
     setShowForm(true);
   };
 
-  const del = (id) => {
-    setDeletingId(id);
+  const del = (inc) => {
+    setDeletingId(inc.id);
+    setDeletingItem(inc); // On stocke l'objet complet pour savoir s'il est récurrent
     setShowDeleteModal(true);
   };
+
+  const [deletingItem, setDeletingItem] = useState(null);
 
   const confirmDelete = async () => {
     setIsDeleting(true);
@@ -101,6 +107,23 @@ const Incomes = () => {
       setIsDeleting(false);
       setShowDeleteModal(false);
       setDeletingId(null);
+      setDeletingItem(null);
+    }
+  };
+
+  const confirmHideOnly = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('incomes').update({ is_hidden: true }).eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+      setDeletingItem(null);
     }
   };
 
@@ -222,7 +245,7 @@ const Incomes = () => {
                           <button onClick={() => openEdit(inc)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 8 }}>
                             <Pencil size={16} style={{ color: '#9CA3AF' }} />
                           </button>
-                          <button onClick={() => del(inc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 8 }}>
+                          <button onClick={() => del(inc)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 8 }}>
                             <Trash2 size={16} style={{ color: '#D1D5DB' }} />
                           </button>
                         </div>
@@ -328,9 +351,13 @@ const Incomes = () => {
         isOpen={showDeleteModal} 
         onClose={() => setShowDeleteModal(false)} 
         onConfirm={confirmDelete}
+        onConfirmAlternative={confirmHideOnly}
         loading={isDeleting}
-        title="Supprimer ce revenu ?"
-        message="Voulez-vous vraiment supprimer ce revenu ? Cette action est définitive."
+        isRecurrent={deletingItem?.is_recurrent}
+        title={deletingItem?.is_recurrent ? "Élément récurrent" : "Supprimer ce revenu ?"}
+        message={deletingItem?.is_recurrent 
+          ? "Ce revenu est récurrent. Voulez-vous le supprimer définitivement ou seulement pour ce mois-ci ?" 
+          : "Voulez-vous vraiment supprimer ce revenu ? Cette action est définitive."}
       />
 
       <BottomNav />

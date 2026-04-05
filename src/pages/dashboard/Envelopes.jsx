@@ -32,6 +32,8 @@ const Envelopes = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [showForecast, setShowForecast] = useState(false);
   const [formData, setFormData] = useState({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false });
 
   useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
@@ -41,10 +43,30 @@ const Envelopes = () => {
     try {
       await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
       const { data: envs } = await supabase.from('envelopes')
-        .select('*, envelope_expenses(amount)').eq('month_date', formatMonthDate(selectedDate));
-      setEnvelopes((envs || []).map(env => ({
-        ...env, spent: (env.envelope_expenses || []).reduce((a, c) => a + parseFloat(c.amount), 0)
-      })));
+        .select('*, envelope_expenses(amount, date)')
+        .eq('user_id', user.id)
+        .eq('month_date', formatMonthDate(selectedDate))
+        .eq('is_hidden', false);
+      
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
+      const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+
+      setEnvelopes((envs || []).map(env => {
+        const allExpenses = env.envelope_expenses || [];
+        const realExpenses = allExpenses.filter(e => {
+          if (isPastMonth) return true;
+          if (isFutureMonth) return false;
+          return e.date <= todayStr;
+        });
+
+        return {
+          ...env,
+          spentForecast: allExpenses.reduce((a, c) => a + parseFloat(c.amount), 0),
+          spentReal: realExpenses.reduce((a, c) => a + parseFloat(c.amount), 0)
+        };
+      }));
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
@@ -69,9 +91,10 @@ const Envelopes = () => {
     setShowForm(true);
   };
 
-  const del = (e, id) => {
+  const del = (e, env) => {
     e.stopPropagation();
-    setDeletingId(id);
+    setDeletingId(env.id);
+    setDeletingItem(env);
     setShowDeleteModal(true);
   };
 
@@ -87,15 +110,32 @@ const Envelopes = () => {
       setIsDeleting(false);
       setShowDeleteModal(false);
       setDeletingId(null);
+      setDeletingItem(null);
+    }
+  };
+
+  const confirmHideOnly = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('envelopes').update({ is_hidden: true }).eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+      setDeletingItem(null);
     }
   };
 
   const totalBudget = envelopes.reduce((a, c) => a + parseFloat(c.max_amount), 0);
-  const totalSpent = envelopes.reduce((a, c) => a + c.spent, 0);
+  const totalSpent = envelopes.reduce((a, c) => a + (showForecast ? c.spentForecast : c.spentReal), 0);
   const totalLeft = Math.max(totalBudget - totalSpent, 0);
 
   const donutSegments = envelopes.map(env => ({
-    value: env.spent,
+    value: showForecast ? env.spentForecast : env.spentReal,
     color: env.color || ACCENT
   }));
 
@@ -106,6 +146,37 @@ const Envelopes = () => {
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
+        {/* Toggle Réel vs Prévisions */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <div style={{ 
+            background: 'white', borderRadius: 14, padding: 4, 
+            display: 'flex', gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' 
+          }}>
+            <button 
+              onClick={() => setShowForecast(false)}
+              style={{ 
+                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: !showForecast ? '#5C6EFF' : 'transparent',
+                color: !showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Réel
+            </button>
+            <button 
+              onClick={() => setShowForecast(true)}
+              style={{ 
+                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: showForecast ? '#5C6EFF' : 'transparent',
+                color: showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Prévisions
+            </button>
+          </div>
+        </div>
+
         {loading && !showForm ? (
           <LoadingSpinner color={ACCENT} />
         ) : (
@@ -114,22 +185,27 @@ const Envelopes = () => {
             <div className="card fade-up" style={{ padding: '20px', marginTop: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
                 <div style={{ minWidth: '100px', textAlign: 'center' }}>
-                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Restant</p>
+                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                    {showForecast ? 'Budget Prévu' : 'Budget Réel'}
+                  </p>
                   <p style={{ fontSize: 24, fontWeight: 900, color: totalLeft >= 0 ? '#22c55e' : '#ef4444', marginBottom: 2 }}>{totalLeft.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-                  <DonutChart segments={donutSegments} total={totalSpent || 1} size={120} centerLabel="Dépensé" />
+                  <DonutChart segments={donutSegments} total={totalSpent || 1} size={120} centerLabel={showForecast ? "Dép. Prévues" : "Dép. Réelles"} />
                 </div>
                 <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px' }}>
-                  {envelopes.slice(0, 3).map(env => (
-                    <div key={env.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: env.color || ACCENT, flexShrink: 0 }} />
-                        <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{env.name}</span>
+                  {envelopes.slice(0, 3).map(env => {
+                    const spent = showForecast ? env.spentForecast : env.spentReal;
+                    return (
+                      <div key={env.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: env.color || ACCENT, flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{env.name}</span>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e', flexShrink: 0 }}>{spent.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e', flexShrink: 0 }}>{env.spent.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -143,8 +219,9 @@ const Envelopes = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {envelopes.map((env, i) => {
                     const IC = getIconComponent(env.icon);
-                    const over = env.spent > env.max_amount;
-                    const remaining = env.max_amount - env.spent;
+                    const spent = showForecast ? env.spentForecast : env.spentReal;
+                    const over = spent > env.max_amount;
+                    const remaining = env.max_amount - spent;
                     return (
                       <div key={env.id} className="card fade-up" style={{ padding: '16px', cursor: 'pointer', animationDelay: `${i * 40}ms`, background: over ? '#FFF5F5' : 'white' }}
                         onClick={() => navigate(`/envelopes/${env.id}`, { state: { date: selectedDate, name: env.name, icon: env.icon, color: env.color } })}>
@@ -154,19 +231,21 @@ const Envelopes = () => {
                         <p style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e', marginBottom: 4 }}>{env.name}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT }} />
-                          <span style={{ fontSize: 11, color: '#555', fontWeight: 500 }}>Montant : {env.max_amount} €</span>
+                          <span style={{ fontSize: 11, color: '#555', fontWeight: 500 }}>Max : {env.max_amount} €</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: over ? '#ef4444' : '#22c55e' }} />
                           <span style={{ fontSize: 11, fontWeight: 600, color: over ? '#ef4444' : '#22c55e' }}>
-                            Restant : {remaining.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                            Reste : {remaining.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                          <button onClick={e => openEdit(e, env)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <button onClick={e => del(e, env)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+
                             <Pencil size={13} style={{ color: '#9CA3AF' }} />
                           </button>
-                          <button onClick={e => del(e, env.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <button onClick={e => del(e, env)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+
                             <Trash2 size={13} style={{ color: '#D1D5DB' }} />
                           </button>
                         </div>
@@ -257,9 +336,13 @@ const Envelopes = () => {
         isOpen={showDeleteModal} 
         onClose={() => setShowDeleteModal(false)} 
         onConfirm={confirmDelete}
+        onConfirmAlternative={confirmHideOnly}
         loading={isDeleting}
-        title="Supprimer cette enveloppe ?"
-        message="Voulez-vous vraiment supprimer cette enveloppe ? Toutes les dépenses liées seront également supprimées."
+        isRecurrent={deletingItem?.is_recurrent}
+        title={deletingItem?.is_recurrent ? "Enveloppe récurrente" : "Supprimer cette enveloppe ?"}
+        message={deletingItem?.is_recurrent 
+          ? "Cette enveloppe est récurrente. Voulez-vous la supprimer définitivement ou seulement pour ce mois-ci ?" 
+          : "Voulez-vous vraiment supprimer cette enveloppe ? Toutes les dépenses liées seront également supprimées."}
       />
 
       <BottomNav />

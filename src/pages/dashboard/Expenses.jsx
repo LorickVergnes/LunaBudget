@@ -39,7 +39,10 @@ const Expenses = () => {
     try {
       await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
       const { data, error } = await supabase.from('expenses').select('*')
-        .eq('month_date', formatMonthDate(selectedDate)).order('date', { ascending: false });
+        .eq('user_id', user.id)
+        .eq('month_date', formatMonthDate(selectedDate))
+        .eq('is_hidden', false)
+        .order('date', { ascending: false });
       if (!error) setExpenses(data || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -80,10 +83,14 @@ const Expenses = () => {
     setEditingId(exp.id);
     setShowForm(true);
   };
-  const del = (id) => {
-    setDeletingId(id);
+
+  const del = (exp) => {
+    setDeletingId(exp.id);
+    setDeletingItem(exp);
     setShowDeleteModal(true);
   };
+
+  const [deletingItem, setDeletingItem] = useState(null);
 
   const confirmDelete = async () => {
     setIsDeleting(true);
@@ -97,6 +104,23 @@ const Expenses = () => {
       setIsDeleting(false);
       setShowDeleteModal(false);
       setDeletingId(null);
+      setDeletingItem(null);
+    }
+  };
+
+  const confirmHideOnly = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('expenses').update({ is_hidden: true }).eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+      setDeletingItem(null);
     }
   };
 
@@ -216,7 +240,7 @@ const Expenses = () => {
                           <button onClick={() => openEdit(exp)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                             <Pencil size={16} style={{ color: '#9CA3AF' }} />
                           </button>
-                          <button onClick={() => del(exp.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                          <button onClick={() => del(exp)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                             <Trash2 size={16} style={{ color: '#D1D5DB' }} />
                           </button>
                         </div>
@@ -321,9 +345,13 @@ const Expenses = () => {
         isOpen={showDeleteModal} 
         onClose={() => setShowDeleteModal(false)} 
         onConfirm={confirmDelete}
+        onConfirmAlternative={confirmHideOnly}
         loading={isDeleting}
-        title="Supprimer cette dépense ?"
-        message="Voulez-vous vraiment supprimer cette dépense fixe ? Cette action est définitive."
+        isRecurrent={deletingItem?.is_recurrent}
+        title={deletingItem?.is_recurrent ? "Élément récurrent" : "Supprimer cette dépense ?"}
+        message={deletingItem?.is_recurrent 
+          ? "Cette dépense est récurrente. Voulez-vous la supprimer définitivement ou seulement pour ce mois-ci ?" 
+          : "Voulez-vous vraiment supprimer cette dépense fixe ? Cette action est définitive."}
       />
 
       <BottomNav />

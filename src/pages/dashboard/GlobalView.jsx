@@ -33,11 +33,11 @@ const GlobalView = () => {
 
             const currentMonthStr = formatMonthDate(selectedDate);
             const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
-                supabase.from('incomes').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
-                supabase.from('expenses').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('incomes').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('expenses').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
                 supabase.from('envelope_expenses').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
-                supabase.from('envelopes').select('max_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
-                supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('envelopes').select('max_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
                 supabase.from('saving_entries').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
             ]);
 

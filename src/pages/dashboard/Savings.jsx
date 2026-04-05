@@ -30,6 +30,8 @@ const Savings = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [showForecast, setShowForecast] = useState(false);
   const [formData, setFormData] = useState({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' });
 
   useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
@@ -38,11 +40,31 @@ const Savings = () => {
     setLoading(true);
     try {
       await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
-      const { data } = await supabase.from('savings')
-        .select('*, saving_entries(amount)').eq('month_date', formatMonthDate(selectedDate));
-      setSavings((data || []).map(s => ({
-        ...s, current: (s.saving_entries || []).reduce((a, c) => a + parseFloat(c.amount), 0)
-      })));
+      const { data: savs } = await supabase.from('savings')
+        .select('*, saving_entries(amount, date)')
+        .eq('user_id', user.id)
+        .eq('month_date', formatMonthDate(selectedDate))
+        .eq('is_hidden', false);
+      
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
+      const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+
+      setSavings((savs || []).map(s => {
+        const allEntries = s.saving_entries || [];
+        const realEntries = allEntries.filter(e => {
+          if (isPastMonth) return true;
+          if (isFutureMonth) return false;
+          return e.date <= todayStr;
+        });
+
+        return {
+          ...s,
+          currentForecast: allEntries.reduce((a, c) => a + parseFloat(c.amount), 0),
+          currentReal: realEntries.reduce((a, c) => a + parseFloat(c.amount), 0)
+        };
+      }));
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
@@ -74,9 +96,10 @@ const Savings = () => {
     setShowForm(true);
   };
 
-  const del = (e, id) => {
+  const del = (e, s) => {
     e.stopPropagation();
-    setDeletingId(id);
+    setDeletingId(s.id);
+    setDeletingItem(s);
     setShowDeleteModal(true);
   };
 
@@ -92,13 +115,33 @@ const Savings = () => {
       setIsDeleting(false);
       setShowDeleteModal(false);
       setDeletingId(null);
+      setDeletingItem(null);
     }
   };
 
-  const total = savings.reduce((a, c) => a + parseFloat(c.target_amount), 0);
-  const totalSaved = savings.reduce((a, c) => a + c.current, 0);
+  const confirmHideOnly = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('savings').update({ is_hidden: true }).eq('id', deletingId);
+      if (error) alert(error.message);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeletingId(null);
+      setDeletingItem(null);
+    }
+  };
 
-  const usedColors = savings.filter(s => s.id !== editingId).map(s => s.color);
+  const totalTarget = savings.reduce((a, c) => a + parseFloat(c.target_amount), 0);
+  const totalSaved = savings.reduce((a, c) => a + (showForecast ? c.currentForecast : c.currentReal), 0);
+
+  const donutSegments = savings.map(s => ({
+    value: showForecast ? s.currentForecast : s.currentReal,
+    color: s.color || '#F9A825'
+  }));
 
   return (
     <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
@@ -106,6 +149,37 @@ const Savings = () => {
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
+
+        {/* Toggle Réel vs Prévisions */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <div style={{ 
+            background: 'white', borderRadius: 14, padding: 4, 
+            display: 'flex', gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' 
+          }}>
+            <button 
+              onClick={() => setShowForecast(false)}
+              style={{ 
+                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: !showForecast ? '#5C6EFF' : 'transparent',
+                color: !showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Réel
+            </button>
+            <button 
+              onClick={() => setShowForecast(true)}
+              style={{ 
+                border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                background: showForecast ? '#5C6EFF' : 'transparent',
+                color: showForecast ? 'white' : '#B0B8C9'
+              }}
+            >
+              Prévisions
+            </button>
+          </div>
+        </div>
 
         {loading && !showForm ? (
           <LoadingSpinner color="#F9A825" />
@@ -115,26 +189,33 @@ const Savings = () => {
             <div className="card fade-up" style={{ padding: '20px', marginTop: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
                 <div style={{ minWidth: '100px', textAlign: 'center' }}>
-                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600, marginBottom: 4 }}>Total</p>
-                  <p style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e', marginBottom: 2 }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
+                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                    {showForecast ? 'Épargne Prévue' : 'Épargne Réelle'}
+                  </p>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e', marginBottom: 2 }}>{totalSaved.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
+                  <span style={{ fontSize: 11, color: '#B0B8C9' }}>Objectif: {totalTarget.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
                   <DonutChart 
-                    segments={savings.map(s => ({ value: parseFloat(s.target_amount), color: s.color || '#F9A825' }))} 
-                    total={total || 1} 
+                    segments={donutSegments} 
+                    total={totalSaved || 1} 
                     size={120} 
+                    centerLabel={showForecast ? "Total Prévu" : "Total Réel"}
                   />
                 </div>
                 <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px' }}>
-                  {savings.slice(0, 3).map(s => (
-                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color || '#F9A825', flexShrink: 0 }} />
-                        <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                  {savings.slice(0, 3).map(s => {
+                    const saved = showForecast ? s.currentForecast : s.currentReal;
+                    return (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color || '#F9A825', flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e', flexShrink: 0 }}>{saved.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e', flexShrink: 0 }}>{parseFloat(s.target_amount).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -148,8 +229,9 @@ const Savings = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {savings.map((s, i) => {
                     const IC = getIconComponent(s.icon);
-                    const pct = Math.min((s.current / Math.max(s.target_amount, 1)) * 100, 100);
-                    const done = s.current >= s.target_amount;
+                    const current = showForecast ? s.currentForecast : s.currentReal;
+                    const pct = Math.min((current / Math.max(s.target_amount, 1)) * 100, 100);
+                    const done = current >= s.target_amount;
                     return (
                       <div key={s.id} className="card fade-up" style={{ padding: '16px', animationDelay: `${i * 40}ms`, cursor: 'pointer' }}
                         onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}>
@@ -161,16 +243,18 @@ const Savings = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                               <p style={{ fontSize: 15, fontWeight: 800, color: '#1a1a2e' }}>{s.name}</p>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <button onClick={e => openEdit(e, s)} style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 4 }}>
+                                <button onClick={e => del(e, s)} style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 4 }}>
+
                                   <Pencil size={16} style={{ color: '#9CA3AF' }} />
                                 </button>
-                                <button onClick={e => del(e, s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 4 }}>
+                                <button onClick={e => del(e, s)} style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 4 }}>
+
                                   <Trash2 size={16} style={{ color: '#D1D5DB' }} />
                                 </button>
                               </div>
                             </div>
                             <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500, marginBottom: 8 }}>
-                              Objectif: {parseFloat(s.target_amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · Total épargné: {s.current.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                              Objectif: {parseFloat(s.target_amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · {showForecast ? 'Prévu' : 'Réel'}: {current.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
                             </p>
                             {/* Progress bar */}
                             <div style={{ height: 6, borderRadius: 99, background: '#EEF2FB', overflow: 'hidden' }}>
@@ -178,7 +262,7 @@ const Savings = () => {
                             </div>
                             {/* Add this month */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                              <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>Épargne du mois : {s.current.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
+                              <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>{showForecast ? 'Total prévu' : 'Versé au réel'} : {current.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
                               {s.is_recurrent && <RotateCw size={11} style={{ color: '#9B5CFF' }} />}
                             </div>
                           </div>
@@ -283,9 +367,13 @@ const Savings = () => {
         isOpen={showDeleteModal} 
         onClose={() => setShowDeleteModal(false)} 
         onConfirm={confirmDelete}
+        onConfirmAlternative={confirmHideOnly}
         loading={isDeleting}
-        title="Supprimer cet objectif ?"
-        message="Voulez-vous vraiment supprimer cet objectif d'épargne ? Toutes les entrées liées seront également supprimées."
+        isRecurrent={deletingItem?.is_recurrent}
+        title={deletingItem?.is_recurrent ? "Objectif récurrent" : "Supprimer cet objectif ?"}
+        message={deletingItem?.is_recurrent 
+          ? "Cet objectif est récurrent. Voulez-vous le supprimer définitivement ou seulement pour ce mois-ci ?" 
+          : "Voulez-vous vraiment supprimer cet objectif d'épargne ? Toutes les entrées liées seront également supprimées."}
       />
 
       <BottomNav />
