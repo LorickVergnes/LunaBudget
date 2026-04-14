@@ -145,3 +145,726 @@ svg.donut {
   font-size: 11px;
   font-weight: 700;
 }
+
+/* ════════════════════════════════════════
+   DESKTOP LAYOUT  (≥ 900px)
+   Mobile is 100% untouched below this.
+   ════════════════════════════════════════ */
+@media (min-width: 900px) {
+
+  /* ── Root shell ── */
+  .desktop-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #EEF2FB;
+  }
+
+  /* Hide mobile-only elements on desktop */
+  .desktop-shell .mobile-only {
+    display: none !important;
+  }
+
+  /* ── Header ── */
+  .desktop-header {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-bottom: 1px solid #EEF2FB;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    padding: 0 28px;
+    height: 66px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    gap: 24px;
+  }
+
+  .desktop-header-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .desktop-header-logo-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #9B5CFF, #5C6EFF);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .desktop-header-logo-text {
+    font-size: 18px;
+    font-weight: 900;
+    color: #1a1a2e;
+    letter-spacing: -0.3px;
+  }
+
+  .desktop-header-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    padding-left: 16px;
+  }
+
+  .desktop-nav-tab {
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #8892a4;
+    text-decoration: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .desktop-nav-tab:hover {
+    background: #F5F7FF;
+    color: #1a1a2e;
+  }
+
+  .desktop-nav-tab--active {
+    background: #1a1a2e;
+    color: white !important;
+  }
+
+  .desktop-header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .desktop-header-avatar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .desktop-header-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #9B5CFF, #5C6EFF);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .desktop-header-avatar span {
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .desktop-header-userinfo {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .desktop-header-username {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+  }
+
+  .desktop-header-useremail {
+    font-size: 11px;
+    color: #B0B8C9;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desktop-header-logout {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #B0B8C9;
+    transition: all 0.2s;
+  }
+
+  .desktop-header-logout:hover {
+    background: #FEE2E2;
+    color: #ef4444;
+  }
+
+  /* ── Body (sidebar + main) ── */
+  .desktop-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Sidebar ── */
+  .desktop-sidebar {
+    width: 72px;
+    background: white;
+    border-right: 1px solid #EEF2FB;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    position: sticky;
+    top: 66px;
+    height: calc(100vh - 66px);
+    flex-shrink: 0;
+  }
+
+  .desktop-sidebar-items {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+
+  .desktop-sidebar-item {
+    text-decoration: none;
+  }
+
+  .desktop-sidebar-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .desktop-sidebar-icon-wrap:hover {
+    background: #F5F7FF !important;
+  }
+
+  .desktop-sidebar-settings {
+    margin-top: auto;
+  }
+
+  /* ── Main content area ── */
+  .desktop-main {
+    flex: 1;
+    padding: 28px 32px;
+    overflow-y: auto;
+  }
+
+  /* ── Greeting section ── */
+  .desktop-greeting {
+    margin-bottom: 24px;
+  }
+
+  .desktop-greeting h1 {
+    font-size: 28px;
+    font-weight: 900;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+  }
+
+  .desktop-greeting p {
+    font-size: 14px;
+    color: #8892a4;
+    font-weight: 500;
+  }
+
+  .desktop-greeting-toprow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  /* Toggle Réel / Prévisions */
+  .desktop-toggle {
+    display: flex;
+    background: white;
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid #E8ECFF;
+    gap: 4px;
+  }
+
+  .desktop-toggle-btn {
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: #B0B8C9;
+  }
+
+  .desktop-toggle-btn--active {
+    background: #5C6EFF;
+    color: white;
+  }
+
+  /* ── KPI Cards row ── */
+  .desktop-kpi-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .desktop-kpi-card {
+    background: white;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .desktop-kpi-card--highlight {
+    background: linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%);
+    color: white;
+  }
+
+  .desktop-kpi-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #8892a4;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .desktop-kpi-card--highlight .desktop-kpi-label {
+    color: rgba(255,255,255,0.75);
+  }
+
+  .desktop-kpi-value {
+    font-size: 26px;
+    font-weight: 900;
+    color: #1a1a2e;
+    letter-spacing: -0.5px;
+  }
+
+  .desktop-kpi-card--highlight .desktop-kpi-value {
+    color: white;
+    font-size: 30px;
+  }
+
+  .desktop-kpi-subtext {
+    font-size: 12px;
+    color: #B0B8C9;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  .desktop-kpi-card--highlight .desktop-kpi-subtext {
+    color: rgba(255,255,255,0.7);
+  }
+
+  .desktop-kpi-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Main grid (budget + donut) ── */
+  .desktop-main-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Budget rows card ── */
+  .desktop-budget-card {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .desktop-card-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin-bottom: 16px;
+  }
+
+  .desktop-budget-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 13px 0;
+    border-bottom: 1px solid #F5F7FF;
+    text-align: left;
+    transition: background 0.15s;
+    border-radius: 0;
+  }
+
+  .desktop-budget-row:hover {
+    background: #F8F9FF;
+    margin: 0 -8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    width: calc(100% + 16px);
+    border-radius: 10px;
+  }
+
+  .desktop-budget-row-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 14px;
+    flex-shrink: 0;
+  }
+
+  .desktop-budget-row-label {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+
+  .desktop-budget-row-amount {
+    font-size: 14px;
+    font-weight: 800;
+    color: #1a1a2e;
+  }
+
+  .desktop-budget-total-row {
+    display: flex;
+    align-items: center;
+    padding-top: 14px;
+    margin-top: 4px;
+  }
+
+  /* ── Donut card ── */
+  .desktop-donut-card {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .desktop-donut-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    flex: 1;
+    margin-top: 12px;
+  }
+
+  .desktop-donut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .desktop-donut-legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-width: 120px;
+  }
+
+  .desktop-donut-legend-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .desktop-donut-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .desktop-donut-legend-label {
+    font-size: 13px;
+    color: #555;
+    font-weight: 500;
+  }
+
+  .desktop-donut-legend-pct {
+    font-size: 14px;
+    font-weight: 800;
+    color: #1a1a2e;
+  }
+
+  /* Alert in donut */
+  .desktop-budget-alert {
+    background: #FEE2E2;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    border: 1px solid #FECACA;
+  }
+
+  /* ── Tip card ── */
+  .desktop-tip-card {
+    background: white;
+    border-radius: 18px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .desktop-tip-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #EEF2FB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── GlobalView desktop ── */
+  .desktop-global-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2a2a4a 100%);
+    border-radius: 18px;
+    padding: 28px 28px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 20px rgba(26,26,46,0.2);
+  }
+
+  .desktop-global-hero-label {
+    font-size: 11px;
+    color: #B0B8C9;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  .desktop-global-hero-value {
+    font-size: 34px;
+    font-weight: 900;
+    color: white;
+  }
+
+  .desktop-global-hero-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .desktop-global-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .desktop-global-kpi-card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+
+  .desktop-global-kpi-icon-wrap {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .desktop-global-kpi-label {
+    font-size: 10px;
+    color: #B0B8C9;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+
+  .desktop-global-kpi-value {
+    font-size: 17px;
+    font-weight: 900;
+    color: #1a1a2e;
+  }
+
+  .desktop-chart-card {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 18px;
+  }
+
+  .desktop-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .desktop-chart-legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #B0B8C9;
+  }
+
+  .desktop-chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .desktop-chart-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .desktop-bars-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 160px;
+  }
+
+  .desktop-bars-month {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .desktop-bars-pair {
+    width: 100%;
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 136px;
+  }
+
+  .desktop-bar {
+    flex: 1;
+    border-radius: 5px 5px 0 0;
+    min-height: 3px;
+    transition: height 0.7s ease;
+  }
+
+  .desktop-bars-label {
+    font-size: 10px;
+    color: #B0B8C9;
+    font-weight: 600;
+    margin-top: 6px;
+    text-transform: capitalize;
+  }
+
+  .desktop-table-card {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .desktop-table-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #F5F7FF;
+  }
+
+  .desktop-table-row:last-child {
+    border-bottom: none;
+  }
+
+  .desktop-table-month {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    min-width: 70px;
+    text-transform: capitalize;
+  }
+
+  .desktop-table-income {
+    font-size: 13px;
+    font-weight: 700;
+    color: #22c55e;
+    flex: 1;
+    text-align: center;
+  }
+
+  .desktop-table-expense {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ef4444;
+    flex: 1;
+    text-align: center;
+  }
+
+  .desktop-table-balance {
+    font-size: 13px;
+    font-weight: 800;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* Month selector on desktop */
+  .desktop-month-selector-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+}
+/* End desktop styles */

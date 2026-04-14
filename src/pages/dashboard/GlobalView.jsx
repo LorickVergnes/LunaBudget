@@ -7,10 +7,14 @@ import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
+import DesktopHeader from '../../components/layout/DesktopHeader';
+import DesktopSidebar from '../../components/layout/DesktopSidebar';
+import useDesktop from '../../hooks/useDesktop';
 
 const GlobalView = () => {
     const { user } = useAuth();
     const { selectedDate, setSelectedDate } = useMonth();
+    const isDesktop = useDesktop();
     const [loading, setLoading] = useState(true);
     const [months, setMonths] = useState([]);
     const [allTimeBalance, setAllTimeBalance] = useState(0);
@@ -45,7 +49,6 @@ const GlobalView = () => {
                 const isThisMonth = monthStr === currentMonthStrFull;
                 const isPastMonth = new Date(monthStr + "-01") < currentMonthStart;
                 
-                // Even if toggle is ON, we only use Forecast logic for the CURRENT month
                 const useForecastLogic = isForecastActive && isThisMonth;
 
                 const mInc = (allInc || []).filter(x => x.month_date === monthStr);
@@ -75,7 +78,6 @@ const GlobalView = () => {
                 return { income, expense };
             };
 
-            // Calculate historical list (6 months)
             const result = [];
             for (let i = 5; i >= 0; i--) {
                 const d = new Date(selectedDate);
@@ -88,8 +90,6 @@ const GlobalView = () => {
             }
             setMonths(result);
 
-            // Calculate All-Time Balance based on the same logic (Past = Real, Current = Toggle)
-            // We need to iterate through all unique months in the data
             const allMonths = [...new Set([
                 ...(allInc||[]).map(x => x.month_date),
                 ...(allExp||[]).map(x => x.month_date),
@@ -116,6 +116,147 @@ const GlobalView = () => {
     const avgBalance = months.length ? months.reduce((a, m) => a + m.balance, 0) / months.length : 0;
     const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expense)), 1);
 
+    const fmt = (n, sign = false) => {
+        const s = n.toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+        return sign && n >= 0 ? `+${s} €` : `${s} €`;
+    };
+
+    // ──────────────────────────────────────────────
+    // DESKTOP LAYOUT
+    // ──────────────────────────────────────────────
+    if (isDesktop) {
+        const KPI_ITEMS = [
+            { icon: TrendingUp, label: 'Total Revenus (6 mois)', value: fmt(allIncome, true), color: '#22c55e' },
+            { icon: TrendingDown, label: 'Total Dépenses (6 mois)', value: `-${allExpense.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`, color: '#ef4444' },
+            { icon: CalendarDays, label: 'Moy. mensuelle', value: fmt(avgBalance, true), color: '#F9A825' },
+            { icon: Globe, label: 'Bilan net (6 mois)', value: fmt(bilan, true), color: bilan >= 0 ? '#22c55e' : '#ef4444' },
+        ];
+
+        return (
+            <div className="desktop-shell fade-in">
+                <DesktopHeader />
+                <div className="desktop-body">
+                    <DesktopSidebar />
+                    <main className="desktop-main">
+
+                        {/* ── Top row: greeting + toggle ── */}
+                        <div className="desktop-greeting-toprow">
+                            <div className="desktop-greeting">
+                                <h1>Vue Globale 🌍</h1>
+                                <p>Analysez l'évolution de votre budget sur les 6 derniers mois.</p>
+                            </div>
+                            <div className="desktop-toggle">
+                                <button
+                                    className={`desktop-toggle-btn${!showForecast ? ' desktop-toggle-btn--active' : ''}`}
+                                    onClick={() => setShowForecast(false)}
+                                >
+                                    Réel
+                                </button>
+                                <button
+                                    className={`desktop-toggle-btn${showForecast ? ' desktop-toggle-btn--active' : ''}`}
+                                    onClick={() => setShowForecast(true)}
+                                >
+                                    Prévisions
+                                </button>
+                            </div>
+                        </div>
+
+                        {loading ? (
+                            <LoadingSpinner />
+                        ) : (
+                            <>
+                                {/* ── Hero: all-time balance ── */}
+                                <div className="desktop-global-hero">
+                                    <div>
+                                        <p className="desktop-global-hero-label">Solde Total (Tous les mois)</p>
+                                        <p className="desktop-global-hero-value">{fmt(allTimeBalance)}</p>
+                                    </div>
+                                    <div className="desktop-global-hero-icon">
+                                        <Globe size={24} color="#5C6EFF" />
+                                    </div>
+                                </div>
+
+                                {/* ── KPI grid ── */}
+                                <div className="desktop-global-kpi-grid">
+                                    {KPI_ITEMS.map(({ icon: Icon, label, value, color }) => (
+                                        <div key={label} className="desktop-global-kpi-card">
+                                            <div className="desktop-global-kpi-icon-wrap" style={{ background: `${color}18` }}>
+                                                <Icon size={18} style={{ color }} />
+                                            </div>
+                                            <p className="desktop-global-kpi-label">{label}</p>
+                                            <p className="desktop-global-kpi-value" style={{ color }}>{value}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* ── Bar chart ── */}
+                                <div className="desktop-chart-card">
+                                    <div className="desktop-chart-header">
+                                        <p className="desktop-card-title">Évolution mensuelle</p>
+                                        <div className="desktop-chart-legend">
+                                            <span className="desktop-chart-legend-item">
+                                                <span className="desktop-chart-legend-dot" style={{ background: '#5C6EFF' }} />
+                                                Revenus
+                                            </span>
+                                            <span className="desktop-chart-legend-item">
+                                                <span className="desktop-chart-legend-dot" style={{ background: '#9B5CFF' }} />
+                                                Dépenses
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="desktop-bars-container">
+                                        {months.map((m, i) => (
+                                            <div key={i} className="desktop-bars-month">
+                                                <div className="desktop-bars-pair">
+                                                    <div
+                                                        className="desktop-bar"
+                                                        style={{
+                                                            background: '#5C6EFF',
+                                                            height: `${(m.income / maxVal) * 136}px`,
+                                                        }}
+                                                    />
+                                                    <div
+                                                        className="desktop-bar"
+                                                        style={{
+                                                            background: '#9B5CFF',
+                                                            height: `${(m.expense / maxVal) * 136}px`,
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span className="desktop-bars-label">{m.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* ── Monthly table ── */}
+                                <div className="desktop-table-card">
+                                    <p className="desktop-card-title" style={{ marginBottom: 16 }}>Détail par mois</p>
+                                    {months.map((m, i) => (
+                                        <div key={i} className="desktop-table-row">
+                                            <span className="desktop-table-month">{m.label}</span>
+                                            <span className="desktop-table-income">+{m.income.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                                            <span className="desktop-table-expense">-{m.expense.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                                            <span
+                                                className="desktop-table-balance"
+                                                style={{ color: m.balance >= 0 ? '#22c55e' : '#ef4444' }}
+                                            >
+                                                {m.balance >= 0 ? '+' : ''}{m.balance.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </main>
+                </div>
+            </div>
+        );
+    }
+
+    // ──────────────────────────────────────────────
+    // MOBILE LAYOUT (inchangé)
+    // ──────────────────────────────────────────────
     return (
         <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
             <TopBar title="Vue Globale" />
