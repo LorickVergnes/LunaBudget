@@ -189,10 +189,8 @@ svg.donut {
   }
 
   .desktop-header-logo-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #9B5CFF, #5C6EFF);
+    width: 45px;
+    height: 45px;
     display: flex;
     align-items: center;
     justify-content: center;

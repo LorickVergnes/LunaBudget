@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { LogOut, PieChart, CreditCard, Mail, PiggyBank, Globe, LayoutDashboard } from 'lucide-react';
+import { LogOut, CreditCard, Mail, PiggyBank, Globe, LayoutDashboard } from 'lucide-react';
 
 const TABS = [
   { to: '/', label: 'Budget', icon: LayoutDashboard, exact: true },
@@ -23,7 +23,7 @@ const DesktopHeader = () => {
       {/* Logo */}
       <div className="desktop-header-logo" onClick={() => navigate('/')}>
         <div className="desktop-header-logo-icon">
-          <PieChart size={18} color="white" />
+          <img src="/LunaBudget/assets/img/Logo_Luna_Budget.png" alt="LunaBudget Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <span className="desktop-header-logo-text">LunaBudget</span>
       </div>
