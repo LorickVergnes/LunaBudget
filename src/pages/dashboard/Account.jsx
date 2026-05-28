@@ -6,8 +6,8 @@ import TopBar from '../../components/layout/TopBar';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 
 const Account = () => {
-  const { user } = useAuth();
-  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
+  const { user, profile, refreshProfile } = useAuth();
+  const [fullName, setFullName] = useState(profile?.full_name || user?.user_metadata?.full_name || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
@@ -16,14 +16,28 @@ const Account = () => {
     setLoading(true);
     setMessage({ text: '', type: '' });
 
-    const { error } = await supabase.auth.updateUser({
+    // 1. Mettre à jour les métadonnées Auth
+    const { error: authError } = await supabase.auth.updateUser({
       data: { full_name: fullName }
     });
 
-    if (error) {
-      setMessage({ text: error.message, type: 'error' });
+    if (authError) {
+      setMessage({ text: authError.message, type: 'error' });
+      setLoading(false);
+      return;
+    }
+
+    // 2. Mettre à jour la table profiles
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    if (profileError) {
+      setMessage({ text: profileError.message, type: 'error' });
     } else {
       setMessage({ text: 'Profil mis à jour avec succès.', type: 'success' });
+      await refreshProfile(); // Rafraîchir le contexte global
     }
     setLoading(false);
   };
@@ -69,6 +83,20 @@ const Account = () => {
                 }} 
               />
               <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 6 }}>L'adresse email ne peut pas être modifiée ici.</p>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#B0B8C9', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Plan actuel
+              </label>
+              <div style={{ 
+                padding: '12px 16px', borderRadius: '12px', border: '1px solid #E8ECFF', 
+                background: profile?.role === 'premium' ? 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' : '#F8FAFC', 
+                color: profile?.role === 'premium' ? 'white' : '#64748B', 
+                fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8
+              }}>
+                {profile?.role === 'premium' ? '💎 Membre Premium' : '🌱 Compte Gratuit'}
+              </div>
             </div>
 
             <div>

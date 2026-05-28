@@ -13,6 +13,7 @@ import Signup from './pages/auth/Signup';
 import { useAuth } from './hooks/useAuth';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import { MonthProvider } from './contexts/MonthContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -23,9 +24,10 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <MonthProvider>
-      <Router>
-        <Routes>
+    <AuthProvider>
+      <MonthProvider>
+        <Router>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
@@ -43,6 +45,7 @@ function App() {
         </Routes>
       </Router>
     </MonthProvider>
+  </AuthProvider>
   );
 }
 

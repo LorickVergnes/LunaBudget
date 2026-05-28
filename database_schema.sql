@@ -20,6 +20,7 @@ create table profiles (
   email text unique,
   full_name text,
   avatar_url text,
+  role text default 'free',
   updated_at timestamp with time zone default now()
 );
 
@@ -151,8 +152,8 @@ create policy "Users can only access their own recurrence_logs" on recurrence_lo
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name, avatar_url)
-  values (new.id, new.email, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
+  insert into public.profiles (id, email, full_name, avatar_url, role)
+  values (new.id, new.email, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url', 'free');
   return new;
 end;
 $$ language plpgsql security definer;

@@ -1,30 +1,9 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { useAuthContext } from '../contexts/AuthContext';
 
+/**
+ * Hook utilitaire pour accéder au contexte d'authentification.
+ * Centralise l'accès à l'utilisateur, au profil (incluant le rôle) et aux fonctions de déconnexion.
+ */
 export const useAuth = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Vérifier la session actuelle
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
-    };
-
-    getSession();
-
-    // Écouter les changements d'état d'auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signOut = () => supabase.auth.signOut();
-
-  return { user, loading, signOut };
+  return useAuthContext();
 };
