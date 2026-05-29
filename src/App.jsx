@@ -18,8 +18,15 @@ import { DashboardProvider } from './contexts/DashboardContext';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <LoadingSpinner fullHeight color="#6366f1" />;
-  if (!user) return <Navigate to="/login" />;
+  
+  if (loading) {
+    return <LoadingSpinner fullHeight color="#6366f1" />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
 };
 
