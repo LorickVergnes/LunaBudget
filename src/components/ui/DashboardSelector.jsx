@@ -170,12 +170,17 @@ const DashboardSelector = ({ isDesktop = false }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {activeDashboard.members?.map(member => (
                     <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px', background: '#F9FAFB', borderRadius: 12 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#4B5563' }}>
-                            {member.role === 'owner' ? '👑' : 'U'}
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#9B5CFF,#5C6EFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>
+                            {member.profile?.full_name?.charAt(0).toUpperCase() || '?'}
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>ID: {member.user_id.substring(0, 8)}...</p>
-                            <p style={{ fontSize: 12, color: '#6B7280' }}>Rôle: {member.role}</p>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {member.profile?.full_name || 'Utilisateur inconnu'}
+                                {member.user_id === user?.id && <span style={{ color: '#B0B8C9', fontWeight: 500, fontSize: 12 }}> (Toi)</span>}
+                            </p>
+                            <p style={{ fontSize: 11, color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {member.role === 'owner' ? 'Propriétaire' : 'Éditeur'} • {member.profile?.email}
+                            </p>
                         </div>
                         {member.role !== 'owner' && isOwner && (
                             <button 

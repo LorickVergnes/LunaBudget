@@ -23,7 +23,13 @@ export const DashboardProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('dashboards')
-        .select('*, members:dashboard_members(*)')
+        .select(`
+          *,
+          members:dashboard_members(
+            *,
+            profile:profiles(full_name, email, avatar_url)
+          )
+        `)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -71,13 +77,25 @@ export const DashboardProvider = ({ children }) => {
   }, [user, fetchDashboards, switchDashboard]);
 
   const addMemberByEmail = useCallback(async (dashboardId, email) => {
-    const { data: profile } = await supabase.from('profiles').select('id').eq('email', email.toLowerCase()).single();
-    if (!profile) throw new Error('Utilisateur non trouvé.');
+    // 1. Appeler la fonction RPC pour trouver l'ID sans être bloqué par RLS
+    const { data: userId, error: rpcError } = await supabase.rpc('get_user_id_by_email', { 
+      target_email: email.toLowerCase() 
+    });
+
+    if (rpcError || !userId) {
+        throw new Error('Utilisateur non trouvé avec cet email.');
+    }
     
+    // 2. L'ajouter au dashboard
     const { error } = await supabase.from('dashboard_members').insert([
-      { dashboard_id: dashboardId, user_id: profile.id, role: 'editor' }
+      { dashboard_id: dashboardId, user_id: userId, role: 'editor' }
     ]);
-    if (error) throw (error.code === '23505' ? new Error('Déjà membre.') : error);
+
+    if (error) {
+        if (error.code === '23505') throw new Error('Cet utilisateur est déjà membre.');
+        throw error;
+    }
+
     await fetchDashboards();
   }, [fetchDashboards]);
 
