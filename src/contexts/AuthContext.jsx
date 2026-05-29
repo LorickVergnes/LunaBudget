@@ -13,41 +13,44 @@ export const AuthProvider = ({ children }) => {
       setProfile(null);
       return;
     }
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
     
-    if (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
-    } else {
+    try {
+      // Un petit délai peut aider la session Supabase à se stabiliser 
+      // lors des changements d'état rapides (login/refresh)
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        // Si c'est juste un problème de lock temporaire, on peut logger sans tout casser
+        console.warn('[AuthContext] Profile fetch warning:', error.message);
+        return;
+      }
       setProfile(data);
+    } catch (err) {
+      console.error('[AuthContext] Profile fetch exception:', err);
     }
   };
 
   useEffect(() => {
-    // Vérifier la session actuelle au chargement
-    const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchProfile(currentUser.id);
-      }
-      setLoading(false);
-    };
-
-    initializeAuth();
+    let mounted = true;
 
     // Écouter les changements d'état d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[AuthContext] Auth state change:', event, session?.user?.id);
+      
+      if (!mounted) return;
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       
       if (currentUser) {
-        // Rafraîchir le profil si l'utilisateur change ou se connecte
+        // Ne pas appeler fetchProfile immédiatement si c'est l'initialisation
+        // pour laisser la session se stabiliser
         await fetchProfile(currentUser.id);
       } else {
         setProfile(null);
@@ -56,7 +59,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = () => supabase.auth.signOut();

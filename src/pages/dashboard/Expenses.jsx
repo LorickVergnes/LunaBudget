@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
@@ -24,6 +25,7 @@ const ACCENT = '#9B5CFF';
 
 const Expenses = () => {
   const { user } = useAuth();
+  const { activeDashboard, loading: dashLoading } = useDashboard();
   const { selectedDate, setSelectedDate } = useMonth();
   const isDesktop = useDesktop();
   const [expenses, setExpenses] = useState([]);
@@ -37,14 +39,22 @@ const Expenses = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Home', color: '#9B5CFF' });
 
-  useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, activeDashboard, selectedDate, dashLoading]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
+      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
       const { data, error } = await supabase.from('expenses').select('*')
-        .eq('user_id', user.id)
+        .eq('dashboard_id', activeDashboard.id)
         .eq('month_date', formatMonthDate(selectedDate))
         .eq('is_hidden', false)
         .order('date', { ascending: false });
@@ -70,7 +80,13 @@ const Expenses = () => {
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
     const roundedAmount = Math.round(parseFloat(formData.amount) * 100) / 100;
-    const data = { ...formData, amount: roundedAmount, user_id: user.id, month_date: formatMonthDate(selectedDate) };
+    const data = { 
+      ...formData, 
+      amount: roundedAmount, 
+      user_id: user.id, 
+      dashboard_id: activeDashboard.id,
+      month_date: formatMonthDate(selectedDate) 
+    };
     if (editingId) {
       const { error } = await supabase.from('expenses').update(data).eq('id', editingId);
       if (error) { alert(error.message); setLoading(false); }

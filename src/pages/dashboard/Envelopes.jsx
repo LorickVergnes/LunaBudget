@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Loader2, Trash2, ChevronRight, RotateCw, Pencil } from 'lucide-react';
@@ -26,6 +27,7 @@ const ACCENT = '#5C6EFF';
 
 const Envelopes = () => {
   const { user } = useAuth();
+  const { activeDashboard, loading: dashLoading } = useDashboard();
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useMonth();
   const isDesktop = useDesktop();
@@ -40,15 +42,24 @@ const Envelopes = () => {
   const [showForecast, setShowForecast] = useState(false);
   const [formData, setFormData] = useState({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false });
 
-  useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, activeDashboard, selectedDate, dashLoading]);
 
   const fetchData = async () => {
+    if (!activeDashboard) return;
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
+      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
       const { data: envs } = await supabase.from('envelopes')
         .select('*, envelope_expenses(amount, date)')
-        .eq('user_id', user.id)
+        .eq('dashboard_id', activeDashboard.id)
         .eq('month_date', formatMonthDate(selectedDate))
         .eq('is_hidden', false);
 
@@ -76,7 +87,13 @@ const Envelopes = () => {
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
     const roundedAmount = Math.round(parseFloat(formData.max_amount) * 100) / 100;
-    const data = { ...formData, max_amount: roundedAmount, user_id: user.id, month_date: formatMonthDate(selectedDate) };
+    const data = { 
+        ...formData, 
+        max_amount: roundedAmount, 
+        user_id: user.id, 
+        dashboard_id: activeDashboard.id,
+        month_date: formatMonthDate(selectedDate) 
+    };
     if (editingId) {
       const { error } = await supabase.from('envelopes').update(data).eq('id', editingId);
       if (!error) { resetForm(); fetchData(); } else { setLoading(false); alert(error.message); }

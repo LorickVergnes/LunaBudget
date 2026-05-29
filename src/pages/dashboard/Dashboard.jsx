@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -92,6 +93,7 @@ const BudgetRow = ({ icon: Icon, label, amount, color, onClick }) => (
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const { selectedDate, setSelectedDate } = useMonth();
+  const { activeDashboard, loading: dashLoading } = useDashboard();
   const navigate = useNavigate();
   const isDesktop = useDesktop();
   const [loading, setLoading] = useState(true);
@@ -99,21 +101,62 @@ const Dashboard = () => {
   const [data, setData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
   const [forecastData, setForecastData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
 
-  useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, selectedDate, activeDashboard, dashLoading]);
 
   const fetchData = async () => {
+    if (!activeDashboard) {
+      console.log('[DashboardPage] No active dashboard, skipping fetch');
+      return;
+    }
+    
+    console.log('[DashboardPage] Fetching data for dashboard:', activeDashboard.name, activeDashboard.id);
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
+      console.log('[DashboardPage] Checking recurrence...');
+      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
+      
       const monthStr = formatMonthDate(selectedDate);
-      const [{ data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }] = await Promise.all([
-        supabase.from('incomes').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('expenses').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('envelope_expenses').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
-        supabase.from('envelopes').select('max_amount').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('saving_entries').select('amount, date').eq('user_id', user.id).eq('month_date', monthStr),
+      console.log('[DashboardPage] Querying tables for month:', monthStr);
+      
+      const [
+        { data: inc, error: incErr }, 
+        { data: exp, error: expErr }, 
+        { data: envExp, error: envExpErr }, 
+        { data: envs, error: envsErr }, 
+        { data: sav, error: savErr }, 
+        { data: savEntries, error: savEntriesErr }
+      ] = await Promise.all([
+        supabase.from('incomes').select('amount, date').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('expenses').select('amount, date').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('envelope_expenses').select('amount, date').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr),
+        supabase.from('envelopes').select('max_amount').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('saving_entries').select('amount, date').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr),
       ]);
+
+      if (incErr) console.error('[DashboardPage] Incomes error:', incErr);
+      if (expErr) console.error('[DashboardPage] Expenses error:', expErr);
+      if (envExpErr) console.error('[DashboardPage] EnvelopeExpenses error:', envExpErr);
+      if (envsErr) console.error('[DashboardPage] Envelopes error:', envsErr);
+      if (savErr) console.error('[DashboardPage] Savings error:', savErr);
+      if (savEntriesErr) console.error('[DashboardPage] SavingEntries error:', savEntriesErr);
+
+      console.log('[DashboardPage] Data fetched:', { 
+        incomes: inc?.length || 0, 
+        expenses: exp?.length || 0, 
+        envExpenses: envExp?.length || 0, 
+        envelopes: envs?.length || 0, 
+        savings: sav?.length || 0, 
+        savEntries: savEntries?.length || 0 
+      });
 
       const now = new Date();
       const todayStr = now.toISOString().split('T')[0];

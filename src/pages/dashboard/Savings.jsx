@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Loader2, Trash2, ChevronRight, RotateCw, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +27,7 @@ const Savings = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useMonth();
+  const { activeDashboard, loading: dashLoading } = useDashboard();
   const isDesktop = useDesktop();
   const [savings, setSavings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,15 +40,24 @@ const Savings = () => {
   const [showForecast, setShowForecast] = useState(false);
   const [formData, setFormData] = useState({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' });
 
-  useEffect(() => { if (user) fetchData(); }, [user, selectedDate]);
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, selectedDate, activeDashboard, dashLoading]);
 
   const fetchData = async () => {
+    if (!activeDashboard) return;
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(user.id, selectedDate);
+      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
       const { data: savs } = await supabase.from('savings')
         .select('*, saving_entries(amount, date)')
-        .eq('user_id', user.id)
+        .eq('dashboard_id', activeDashboard.id)
         .eq('month_date', formatMonthDate(selectedDate))
         .eq('is_hidden', false);
 
@@ -74,7 +85,13 @@ const Savings = () => {
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
     const roundedAmount = Math.round(parseFloat(formData.target_amount) * 100) / 100;
-    const data = { ...formData, target_amount: roundedAmount, user_id: user.id, month_date: formatMonthDate(selectedDate) };
+    const data = { 
+        ...formData, 
+        target_amount: roundedAmount, 
+        user_id: user.id, 
+        dashboard_id: activeDashboard.id,
+        month_date: formatMonthDate(selectedDate) 
+    };
     if (data.is_recurrent && data.max_month) { data.max_month = `${data.max_month}-01`; } else { data.max_month = null; }
     if (editingId) {
       const { error } = await supabase.from('savings').update(data).eq('id', editingId);
@@ -436,4 +453,5 @@ const Savings = () => {
     </div>
   );
 };
+
 export default Savings;

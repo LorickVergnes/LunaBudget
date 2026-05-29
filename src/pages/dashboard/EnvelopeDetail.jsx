@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { ArrowLeft, Plus, Check, Loader2, Trash2, Calendar, Pencil, ShoppingCart } from 'lucide-react';
@@ -15,6 +16,7 @@ import { FormCard, AmountInput } from '../../components/ui/FormUI';
 
 const EnvelopeDetail = () => {
   const { user } = useAuth();
+  const { activeDashboard, loading: dashLoading } = useDashboard();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,21 +34,40 @@ const EnvelopeDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
 
-  useEffect(() => { if (user) fetchData(); }, [user, id]);
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, activeDashboard, id, dashLoading]);
 
   const fetchData = async () => {
     setLoading(true);
     const { data } = await supabase.from('envelope_expenses').select('*')
-      .eq('envelope_id', id).order('date', { ascending: false });
+      .eq('envelope_id', id)
+      .eq('dashboard_id', activeDashboard.id)
+      .order('date', { ascending: false });
     setExpenses(data || []);
     setLoading(false);
   };
 
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
-    // Arrondi explicite à 2 décimales pour éviter les erreurs de précision (ex: 20 -> 19.99)
+    // Arrondi explicite à 2 décimales
     const roundedAmount = Math.round(parseFloat(formData.amount) * 100) / 100;
-    const data = { ...formData, amount: roundedAmount, user_id: user.id, envelope_id: id, month_date: formatMonthDate(selectedDate), icon: 'ShoppingCart', color: '#5C6EFF' };
+    const data = { 
+      ...formData, 
+      amount: roundedAmount, 
+      user_id: user.id, 
+      dashboard_id: activeDashboard.id,
+      envelope_id: id, 
+      month_date: formatMonthDate(selectedDate), 
+      icon: 'ShoppingCart', 
+      color: '#5C6EFF' 
+    };
     if (editingId) {
       const { error } = await supabase.from('envelope_expenses').update(data).eq('id', editingId);
       if (!error) { setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); setEditingId(null); fetchData(); }
@@ -117,7 +138,7 @@ const EnvelopeDetail = () => {
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: `${envelopeColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <HeaderIcon size={20} style={{ color: envelopeColor }} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{exp.name}</p>
                   <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
                     {parseFloat(exp.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {new Date(exp.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { ArrowLeft, Plus, Check, Loader2, Trash2, Calendar, Pencil } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -19,6 +20,7 @@ const SavingDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedDate } = useMonth();
+  const { activeDashboard, loading: dashLoading } = useDashboard();
   const [savingName] = useState(location.state?.name || 'Épargne');
   const savingIcon = location.state?.icon || 'PiggyBank';
   const savingColor = location.state?.color || '#F9A825';
@@ -32,20 +34,38 @@ const SavingDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ amount: '', date: new Date().toISOString().split('T')[0] });
 
-  useEffect(() => { if (user) fetchData(); }, [user, id]);
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, id, activeDashboard, dashLoading]);
 
   const fetchData = async () => {
+    if (!activeDashboard) return;
     setLoading(true);
-    const { data } = await supabase.from('saving_entries').select('*').eq('saving_id', id).order('date', { ascending: false });
+    const { data } = await supabase.from('saving_entries').select('*')
+      .eq('saving_id', id)
+      .eq('dashboard_id', activeDashboard.id)
+      .order('date', { ascending: false });
     setEntries(data || []);
     setLoading(false);
   };
 
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
-    // Arrondi explicite à 2 décimales pour éviter les erreurs de précision (ex: 20 -> 19.99)
     const roundedAmount = Math.round(parseFloat(formData.amount) * 100) / 100;
-    const data = { ...formData, amount: roundedAmount, user_id: user.id, saving_id: id, month_date: formatMonthDate(selectedDate) };
+    const data = { 
+        ...formData, 
+        amount: roundedAmount, 
+        user_id: user.id, 
+        dashboard_id: activeDashboard.id,
+        saving_id: id, 
+        month_date: formatMonthDate(selectedDate) 
+    };
     if (editingId) {
       const { error } = await supabase.from('saving_entries').update(data).eq('id', editingId);
       if (!error) { setFormData({ amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); setEditingId(null); fetchData(); }

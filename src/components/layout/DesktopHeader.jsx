@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { LogOut, CreditCard, Mail, PiggyBank, Globe, LayoutDashboard } from 'lucide-react';
+import DashboardSelector from '../ui/DashboardSelector';
 
 const TABS = [
   { to: '/', label: 'Budget', icon: LayoutDashboard, exact: true },
@@ -43,6 +44,11 @@ const DesktopHeader = () => {
           </NavLink>
         ))}
       </nav>
+
+      {/* Dashboard Selector */}
+      <div style={{ marginLeft: 'auto', marginRight: 24 }}>
+        <DashboardSelector isDesktop />
+      </div>
 
       {/* User section */}
       <div className="desktop-header-user">

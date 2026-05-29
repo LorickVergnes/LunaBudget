@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -14,6 +15,7 @@ import useDesktop from '../../hooks/useDesktop';
 const GlobalView = () => {
     const { user } = useAuth();
     const { selectedDate, setSelectedDate } = useMonth();
+    const { activeDashboard, loading: dashLoading } = useDashboard();
     const isDesktop = useDesktop();
     const [loading, setLoading] = useState(true);
     const [months, setMonths] = useState([]);
@@ -25,9 +27,18 @@ const GlobalView = () => {
         setSelectedDate(new Date());
     }, []);
 
-    useEffect(() => { if (user) fetchGlobal(); }, [user, selectedDate, showForecast]);
+    useEffect(() => { 
+        if (user) {
+            if (activeDashboard) {
+                fetchGlobal();
+            } else if (!dashLoading) {
+                setLoading(false);
+            }
+        }
+    }, [user, selectedDate, showForecast, activeDashboard, dashLoading]);
 
     const fetchGlobal = async () => {
+        if (!activeDashboard) return;
         setLoading(true);
         try {
             const now = new Date();
@@ -37,12 +48,12 @@ const GlobalView = () => {
 
             const currentMonthStr = formatMonthDate(selectedDate);
             const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
-                supabase.from('incomes').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('expenses').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('envelope_expenses').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
-                supabase.from('envelopes').select('max_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('savings').select('target_amount, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('saving_entries').select('amount, date, month_date').eq('user_id', user.id).lte('month_date', currentMonthStr),
+                supabase.from('incomes').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr),
+                supabase.from('envelopes').select('max_amount, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr),
             ]);
 
             const getMonthlyTotals = (monthStr, isForecastActive) => {

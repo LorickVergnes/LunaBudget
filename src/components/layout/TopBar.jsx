@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import DashboardSelector from '../ui/DashboardSelector';
 
 const TopBar = ({ title }) => {
   const { user, signOut } = useAuth();
@@ -36,16 +37,14 @@ const TopBar = ({ title }) => {
         }}>
           <span style={{ fontSize: 16, color: 'white', lineHeight: 0 }}>{displayName.charAt(0).toUpperCase()}</span>
         </div>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {displayName}
-        </span>
       </Link>
 
-      {/* Titre de la catégorie (Centre) */}
-      <div style={{ flex: 1, textAlign: 'center', display: 'flex', justifyContent: 'center', width: '40%' }}>
-        <span style={{ fontSize: 17, fontWeight: 800, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {/* Titre de la catégorie & Sélecteur (Centre) */}
+      <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: '40%' }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {title}
         </span>
+        <DashboardSelector />
       </div>
 
       {/* Bouton de déconnexion (Droite) */}
