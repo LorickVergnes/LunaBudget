@@ -117,15 +117,12 @@ const Dashboard = () => {
       return;
     }
     
-    console.log('[DashboardPage] Fetching data for dashboard:', activeDashboard.name, activeDashboard.id);
     setLoading(true);
     try {
-      console.log('[DashboardPage] Checking recurrence...');
       await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
       
       const monthStr = formatMonthDate(selectedDate);
-      console.log('[DashboardPage] Querying tables for month:', monthStr);
-      
+
       const [
         { data: inc, error: incErr }, 
         { data: exp, error: expErr }, 
@@ -148,15 +145,6 @@ const Dashboard = () => {
       if (envsErr) console.error('[DashboardPage] Envelopes error:', envsErr);
       if (savErr) console.error('[DashboardPage] Savings error:', savErr);
       if (savEntriesErr) console.error('[DashboardPage] SavingEntries error:', savEntriesErr);
-
-      console.log('[DashboardPage] Data fetched:', { 
-        incomes: inc?.length || 0, 
-        expenses: exp?.length || 0, 
-        envExpenses: envExp?.length || 0, 
-        envelopes: envs?.length || 0, 
-        savings: sav?.length || 0, 
-        savEntries: savEntries?.length || 0 
-      });
 
       const now = new Date();
       const todayStr = now.toISOString().split('T')[0];
