@@ -25,6 +25,49 @@ import useDesktop from '../../hooks/useDesktop';
 
 const ACCENT = '#5C6EFF';
 
+const fmt = (num) => num.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
+
+const ProgressLinear = ({ value, max, color, height = 6 }) => {
+  const pct = Math.min((value / Math.max(max, 1)) * 100, 100);
+  return (
+    <div style={{ height, borderRadius: 99, background: '#EEF2FB', overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: color, transition: 'width .7s ease' }} />
+    </div>
+  );
+};
+
+const IconBubble = ({ icon, color, size = 42 }) => {
+  const IC = getIconComponent(icon);
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <IC size={size * 0.45} style={{ color }} />
+    </div>
+  );
+};
+
+const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#EEF2FB', label, sublabel }) => {
+  const pct = Math.min(value / Math.max(max, 1), 1);
+  const r = (size - stroke) / 2;
+  const cx = size / 2, cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const dashLength = Math.max(0, pct * circ);
+  
+  return (
+    <div style={{ position: 'relative', width: size, height: size, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={stroke} stroke={trackColor} />
+        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={stroke} stroke={color} strokeDasharray={`${dashLength} ${circ}`} strokeLinecap="round" style={{ transition: 'stroke-dasharray 0.7s ease' }} />
+      </svg>
+      {(label || sublabel) && (
+        <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
+          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: '#1a1a2e', display: 'block' }}>{label}</span>}
+          {sublabel && <span style={{ fontSize: size * 0.09, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>{sublabel}</span>}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Envelopes = () => {
   const { user } = useAuth();
   const { activeDashboard, loading: dashLoading } = useDashboard();
@@ -39,7 +82,6 @@ const Envelopes = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingItem, setDeletingItem] = useState(null);
-  const [showForecast, setShowForecast] = useState(false);
   const [formData, setFormData] = useState({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false });
 
   useEffect(() => { 
@@ -77,8 +119,7 @@ const Envelopes = () => {
         });
         return {
           ...env,
-          spentForecast: allExpenses.reduce((a, c) => a + parseFloat(c.amount), 0),
-          spentReal: realExpenses.reduce((a, c) => a + parseFloat(c.amount), 0)
+          spent: realExpenses.reduce((a, c) => a + parseFloat(c.amount), 0)
         };
       }));
     } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -140,13 +181,9 @@ const Envelopes = () => {
   };
 
   const totalBudget = envelopes.reduce((a, c) => a + parseFloat(c.max_amount), 0);
-  const totalSpent = envelopes.reduce((a, c) => a + (showForecast ? c.spentForecast : c.spentReal), 0);
+  const totalSpent = envelopes.reduce((a, c) => a + c.spent, 0);
   const totalLeft = Math.max(totalBudget - totalSpent, 0);
-
-  const donutSegments = envelopes.map(env => ({
-    value: showForecast ? env.spentForecast : env.spentReal,
-    color: env.color || ACCENT
-  }));
+  const pctTotal = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   const modalForm = (
     <BottomModal isOpen={showForm} onClose={resetForm} title={editingId ? "Modifier l'enveloppe" : "Nouvelle enveloppe"}>
@@ -189,61 +226,101 @@ const Envelopes = () => {
         : "Voulez-vous vraiment supprimer cette enveloppe ? Toutes les dépenses liées seront également supprimées."} />
   );
 
-  // Shared envelope card
-  const EnvelopeCard = ({ env, i, cardStyle = {} }) => {
-    const IC = getIconComponent(env.icon);
-    const spent = showForecast ? env.spentForecast : env.spentReal;
-    const over = spent > env.max_amount;
-    const remaining = env.max_amount - spent;
-    const pct = Math.min((spent / Math.max(env.max_amount, 1)) * 100, 100);
+  const EnvelopeCard = ({ e, i }) => {
+    const target = parseFloat(e.max_amount);
+    const spent = e.spent;
+    const pct = Math.round((spent / Math.max(target, 1)) * 100);
+    const remaining = target - spent;
+    const over = pct >= 100;
+  
+    if (isDesktop) {
+      return (
+        <div className="card fade-up" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, animationDelay: `${i * 40}ms` }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div 
+              style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+              onClick={() => navigate(`/envelopes/${e.id}`, { state: { date: selectedDate, name: e.name, icon: e.icon, color: e.color } })}
+            >
+              <IconBubble icon={e.icon} color={e.color || ACCENT} size={44} />
+              <div>
+                <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 15 }}>{e.name}</div>
+                <div style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600 }}>{over ? "Dépassé" : `${pct}% utilisé`}</div>
+              </div>
+            </div>
+          </div>
+  
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '8px 0' }} onClick={() => navigate(`/envelopes/${e.id}`, { state: { date: selectedDate, name: e.name, icon: e.icon, color: e.color } })} >
+            <SingleDonut value={spent} max={target} size={130} stroke={12} color={over ? '#EF4444' : (e.color || ACCENT)} label={`${pct}%`} sublabel={remaining >= 0 ? "utilisé" : "dépassé"} />
+          </div>
+  
+          <div>
+            <ProgressLinear value={spent} max={target} color={over ? '#EF4444' : (e.color || ACCENT)} height={8} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, fontWeight: 700 }}>
+              <span style={{ color: '#8892a4' }}>{fmt(spent)}</span>
+              <span style={{ color: '#1a1a2e' }}>{fmt(target)}</span>
+            </div>
+          </div>
+  
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={(ev) => openEdit(ev, e)}
+              style={{
+                flex: 1, padding: '10px', borderRadius: 12,
+                background: '#F5F7FF', color: '#5C6EFF',
+                fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              <Pencil size={14} /> Modifier
+            </button>
+            <button
+              onClick={(ev) => del(ev, e)}
+              style={{
+                padding: '10px 14px', borderRadius: 12,
+                background: '#FEECEC', color: '#DC2626',
+                fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+      );
+    }
+  
+    // Mobile layout
     return (
-      <div className="card fade-up"
-        style={{ padding: '18px', cursor: 'pointer', animationDelay: `${i * 40}ms`, background: over ? '#FFF5F5' : 'white', ...cardStyle }}
-        onClick={() => navigate(`/envelopes/${env.id}`, { state: { date: selectedDate, name: env.name, icon: env.icon, color: env.color } })}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: '50%', background: `${env.color || ACCENT}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <IC size={20} style={{ color: env.color || ACCENT }} />
-          </div>
+      <div className="card fade-up" style={{ padding: 16, animationDelay: `${i * 40}ms` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} onClick={() => navigate(`/envelopes/${e.id}`, { state: { date: selectedDate, name: e.name, icon: e.icon, color: e.color } })}>
+          <IconBubble icon={e.icon} color={e.color || ACCENT} size={42} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>{env.name}</p>
-            <p style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 500 }}>Max : {env.max_amount} €</p>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button 
-              onClick={e => openEdit(e, env)} 
-              style={{ 
-                background: '#F3F4F6', border: 'none', borderRadius: 10, width: 38, height: 38,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = '#E5E7EB'}
-              onMouseLeave={e => e.currentTarget.style.background = '#F3F4F6'}
-            >
-              <Pencil size={18} style={{ color: '#6B7280' }} />
-            </button>
-            <button 
-              onClick={e => del(e, env)} 
-              style={{ 
-                background: '#FEE2E2', border: 'none', borderRadius: 10, width: 38, height: 38,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = '#FECACA'}
-              onMouseLeave={e => e.currentTarget.style.background = '#FEE2E2'}
-            >
-              <Trash2 size={18} style={{ color: '#EF4444' }} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
+              <div style={{
+                fontSize: 11, fontWeight: 800,
+                color: over ? "#EF4444" : (e.color || ACCENT),
+                background: over ? "#FEECEC" : `${e.color || ACCENT}1A`,
+                padding: "3px 8px", borderRadius: 999, flexShrink: 0
+              }}>{pct}%</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, fontSize: 12, fontWeight: 700 }}>
+              <span style={{ color: '#8892a4' }}>{fmt(spent)} / {fmt(target)}</span>
+              <span style={{ color: over ? "#EF4444" : '#8892a4' }}>
+                {over ? `+${fmt(-remaining)}` : `${fmt(remaining)} utilisé`}
+              </span>
+            </div>
           </div>
         </div>
-        {/* Progress bar */}
-        <div style={{ height: 6, borderRadius: 99, background: '#EEF2FB', overflow: 'hidden', marginBottom: 6 }}>
-          <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: over ? '#ef4444' : (env.color || ACCENT), transition: 'width .7s ease' }} />
+        <div style={{ marginTop: 12 }}>
+          <ProgressLinear value={spent} max={target} color={over ? '#EF4444' : (e.color || ACCENT)} height={8} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: over ? '#ef4444' : '#22c55e' }}>
-            Reste : {remaining.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
-          </span>
-          <span style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 500 }}>{spent.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} / {env.max_amount} €</span>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button onClick={(ev) => openEdit(ev, e)} style={{ flex: 1, padding: '8px', borderRadius: 10, background: '#F5F7FF', color: '#5C6EFF', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Pencil size={12} /> Modifier
+          </button>
+          <button onClick={(ev) => del(ev, e)} style={{ padding: '8px 12px', borderRadius: 10, background: '#FEECEC', color: '#DC2626', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}>
+            <Trash2 size={12} />
+          </button>
         </div>
       </div>
     );
@@ -264,10 +341,6 @@ const Envelopes = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
-                <div className="desktop-toggle">
-                  <button className={`desktop-toggle-btn${!showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(false)}>Réel</button>
-                  <button className={`desktop-toggle-btn${showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(true)}>Prévisions</button>
-                </div>
                 <button onClick={() => { resetForm(); setShowForm(true); }}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, background: ACCENT, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(92,110,255,0.35)' }}>
                   <Plus size={18} /> Nouvelle enveloppe
@@ -276,56 +349,32 @@ const Envelopes = () => {
             </div>
 
             {loading && !showForm ? <LoadingSpinner color={ACCENT} /> : (
-              <div className="desktop-main-grid">
-                {/* Left: Summary */}
-                <div className="desktop-budget-card" style={{ display: 'flex', flexDirection: 'column' }}>
-                  <p className="desktop-card-title">Résumé des enveloppes</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 32, padding: '10px 0' }}>
-                    <DonutChart segments={donutSegments} total={totalSpent || 0} size={200} centerLabel={showForecast ? "Dép. Prévues" : "Dép. Réelles"} />
-                    
-                    <div style={{ width: '100%' }}>
-                       <div style={{ display: 'flex', justifyContent: 'center', gap: 40, marginBottom: 24, borderBottom: '1px solid #F5F7FF', paddingBottom: 16 }}>
-                          <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', marginBottom: 4 }}>Dépensé</p>
-                            <p style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e' }}>{totalSpent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
-                          </div>
-                          <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', marginBottom: 4 }}>Restant</p>
-                            <p style={{ fontSize: 24, fontWeight: 900, color: totalLeft >= 0 ? '#22c55e' : '#ef4444' }}>{totalLeft.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
-                          </div>
-                       </div>
-
-                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-                        {envelopes.map(env => {
-                          const spent = showForecast ? env.spentForecast : env.spentReal;
-                          return (
-                            <div key={env.id} style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: env.color || ACCENT, flexShrink: 0 }} />
-                                <span style={{ fontSize: 13, color: '#555', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{env.name}</span>
-                              </div>
-                              <span style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', flexShrink: 0 }}>{spent.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                            </div>
-                          );
-                        })}
+              <div>
+                <div className="desktop-budget-card" style={{ marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+                    <SingleDonut value={totalSpent} max={totalBudget} size={140} stroke={14} color={ACCENT} label={`${pctTotal}%`} sublabel="global" />
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ fontSize: 13, color: '#B0B8C9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Toutes enveloppes confondues</div>
+                      <div style={{ fontSize: 32, fontWeight: 900, color: '#1a1a2e', marginTop: 4 }}>
+                        {fmt(totalSpent)} <span style={{ fontSize: 18, color: '#8892a4', fontWeight: 700 }}>/ {fmt(totalBudget)}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                        <span style={{ background: '#EEF2FB', color: '#5C6EFF', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{envelopes.length} enveloppes</span>
+                        <span style={{ background: '#ECFDF5', color: '#059669', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{fmt(totalBudget - totalSpent)} disponible</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Grid of envelope cards */}
-                <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 250px)', paddingRight: 4 }}>
-                  <p className="desktop-card-title">Mes enveloppes ({envelopes.length})</p>
-                  {envelopes.length === 0 ? (
-                    <div className="desktop-budget-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                      <p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucune enveloppe ce mois.</p>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
-                      {envelopes.map((env, i) => <EnvelopeCard key={env.id} env={env} i={i} />)}
-                    </div>
-                  )}
-                </div>
+                {envelopes.length === 0 ? (
+                  <div className="desktop-budget-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+                    <p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucune enveloppe ce mois.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                    {envelopes.map((env, i) => <EnvelopeCard key={env.id} e={env} i={i} />)}
+                  </div>
+                )}
               </div>
             )}
           </main>
@@ -336,98 +385,35 @@ const Envelopes = () => {
     );
   }
 
-  // ── MOBILE (inchangé) ──
+  // ── MOBILE ──
   return (
     <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
       <TopBar title="Dépenses variables" />
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-          <div style={{ background: 'white', borderRadius: 14, padding: 4, display: 'flex', gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <button onClick={() => setShowForecast(false)} style={{ border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', background: !showForecast ? '#5C6EFF' : 'transparent', color: !showForecast ? 'white' : '#B0B8C9' }}>Réel</button>
-            <button onClick={() => setShowForecast(true)} style={{ border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', background: showForecast ? '#5C6EFF' : 'transparent', color: showForecast ? 'white' : '#B0B8C9' }}>Prévisions</button>
-          </div>
-        </div>
+        <div style={{ height: 16 }} />
+
         {loading && !showForm ? <LoadingSpinner color={ACCENT} /> : (
           <>
-            <div className="card fade-up" style={{ padding: '20px', marginTop: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: '100px', textAlign: 'center' }}>
-                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{showForecast ? 'Budget Prévu' : 'Budget Réel'}</p>
-                  <p style={{ fontSize: 24, fontWeight: 900, color: totalLeft >= 0 ? '#22c55e' : '#ef4444', marginBottom: 2 }}>{totalLeft.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-                  <DonutChart segments={donutSegments} total={totalSpent || 1} size={120} centerLabel={showForecast ? "Dép. Prévues" : "Dép. Réelles"} />
-                </div>
-                <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px' }}>
-                  {envelopes.slice(0, 3).map(env => {
-                    const spent = showForecast ? env.spentForecast : env.spentReal;
-                    return (
-                      <div key={env.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: env.color || ACCENT, flexShrink: 0 }} />
-                          <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{env.name}</span>
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e', flexShrink: 0 }}>{spent.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                      </div>
-                    );
-                  })}
+            <div style={{ background: 'linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%)', borderRadius: 18, padding: 20, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(92,110,255,0.3)' }} className="fade-up">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <SingleDonut value={totalSpent} max={totalBudget} size={90} stroke={10} color="#fff" trackColor="rgba(255,255,255,.25)" />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, opacity: .85, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Budget enveloppes
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4, letterSpacing: -0.3 }}>{fmt(totalSpent)}</div>
+                  <div style={{ fontSize: 12, opacity: .85, fontWeight: 600, marginTop: 2 }}>sur {fmt(totalBudget)} · {pctTotal}%</div>
                 </div>
               </div>
             </div>
-            <div style={{ marginTop: 20 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 10, paddingLeft: 4 }}>Les enveloppes</p>
-              {envelopes.length === 0 ? (
-                <div className="card" style={{ padding: '40px 20px', textAlign: 'center' }}><p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucune enveloppe ce mois.</p></div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {envelopes.map((env, i) => {
-                    const IC = getIconComponent(env.icon);
-                    const spent = showForecast ? env.spentForecast : env.spentReal;
-                    const over = spent > env.max_amount;
-                    const remaining = env.max_amount - spent;
-                    return (
-                      <div key={env.id} className="card fade-up" style={{ padding: '16px', cursor: 'pointer', animationDelay: `${i * 40}ms`, background: over ? '#FFF5F5' : 'white' }}
-                        onClick={() => navigate(`/envelopes/${env.id}`, { state: { date: selectedDate, name: env.name, icon: env.icon, color: env.color } })}>
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: `${env.color || ACCENT}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-                          <IC size={22} style={{ color: env.color || ACCENT }} />
-                        </div>
-                        <p style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e', marginBottom: 4 }}>{env.name}</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT }} />
-                          <span style={{ fontSize: 11, color: '#555', fontWeight: 500 }}>Max : {env.max_amount} €</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: over ? '#ef4444' : '#22c55e' }} />
-                          <span style={{ fontSize: 11, fontWeight: 600, color: over ? '#ef4444' : '#22c55e' }}>Reste : {remaining.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                          <button 
-                            onClick={e => openEdit(e, env)} 
-                            style={{ 
-                              background: 'transparent', border: 'none', borderRadius: '50%', width: 38, height: 38,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                            }}
-                          >
-                            <Pencil size={16} style={{ color: '#B0B8C9' }} />
-                          </button>
-                          <button 
-                            onClick={e => del(e, env)} 
-                            style={{ 
-                              background: 'transparent', border: 'none', borderRadius: '50%', width: 38, height: 38,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                            }}
-                          >
-                            <Trash2 size={16} style={{ color: '#B0B8C9' }} />
-                          </button>
-                        </div>
 
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <div style={{ display: 'grid', gap: 12 }}>
+              {envelopes.map((env, i) => <EnvelopeCard key={env.id} e={env} i={i} />)}
             </div>
+            {envelopes.length === 0 && (
+              <div className="card" style={{ padding: '40px 20px', textAlign: 'center' }}><p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucune enveloppe ce mois.</p></div>
+            )}
           </>
         )}
       </div>
@@ -444,3 +430,4 @@ const Envelopes = () => {
   );
 };
 export default Envelopes;
+
