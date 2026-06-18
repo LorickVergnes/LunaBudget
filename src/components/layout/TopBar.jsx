@@ -30,7 +30,7 @@ const TopBar = ({ title }) => {
           width: 36, height: 36, 
           minWidth: 36, minHeight: 36,
           borderRadius: '50%', 
-          background: 'linear-gradient(135deg,#9B5CFF,#5C6EFF)', 
+          background: 'linear-gradient(135deg,#E5BA73,#A0D2EB)', 
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
           aspectRatio: '1/1'
@@ -41,7 +41,7 @@ const TopBar = ({ title }) => {
 
       {/* Titre de la catégorie & Sélecteur (Centre) */}
       <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: '40%' }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: '#4A6984', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {title}
         </span>
         <DashboardSelector />

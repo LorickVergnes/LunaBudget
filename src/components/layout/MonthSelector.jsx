@@ -13,7 +13,7 @@ const MonthSelector = ({ selectedDate, onDateChange }) => (
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 8, color: '#B0B8C9', display: 'flex' }}>
       <ChevronLeft size={22} />
     </button>
-    <span style={{ fontSize: 17, fontWeight: 800, color: '#1a1a2e', letterSpacing: '-0.02em' }}>
+    <span style={{ fontSize: 17, fontWeight: 800, color: '#4A6984', letterSpacing: '-0.02em' }}>
       {getMonthName(selectedDate)}
     </span>
     <button onClick={() => onDateChange(getNextMonth(selectedDate))}

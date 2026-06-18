@@ -128,7 +128,7 @@ const DeleteConfirmationModal = ({
         </div>
         
         {/* Title & Message */}
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', textAlign: 'center', marginBottom: 12 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#4A6984', textAlign: 'center', marginBottom: 12 }}>
           {title || "Confirmation"}
         </h2>
         <p style={{ fontSize: 16, color: '#6B7280', textAlign: 'center', marginBottom: 32, lineHeight: 1.5 }}>

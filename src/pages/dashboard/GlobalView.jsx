@@ -183,7 +183,7 @@ const GlobalView = () => {
                                         <p className="desktop-global-hero-value">{fmt(allTimeBalance)}</p>
                                     </div>
                                     <div className="desktop-global-hero-icon">
-                                        <Globe size={24} color="#5C6EFF" />
+                                        <Globe size={24} color="#A0D2EB" />
                                     </div>
                                 </div>
 
@@ -206,11 +206,11 @@ const GlobalView = () => {
                                         <p className="desktop-card-title">Évolution mensuelle</p>
                                         <div className="desktop-chart-legend">
                                             <span className="desktop-chart-legend-item">
-                                                <span className="desktop-chart-legend-dot" style={{ background: '#5C6EFF' }} />
+                                                <span className="desktop-chart-legend-dot" style={{ background: '#A0D2EB' }} />
                                                 Revenus
                                             </span>
                                             <span className="desktop-chart-legend-item">
-                                                <span className="desktop-chart-legend-dot" style={{ background: '#9B5CFF' }} />
+                                                <span className="desktop-chart-legend-dot" style={{ background: '#E5BA73' }} />
                                                 Dépenses
                                             </span>
                                         </div>
@@ -222,14 +222,14 @@ const GlobalView = () => {
                                                     <div
                                                         className="desktop-bar"
                                                         style={{
-                                                            background: '#5C6EFF',
+                                                            background: '#A0D2EB',
                                                             height: `${(m.income / maxVal) * 136}px`,
                                                         }}
                                                     />
                                                     <div
                                                         className="desktop-bar"
                                                         style={{
-                                                            background: '#9B5CFF',
+                                                            background: '#E5BA73',
                                                             height: `${(m.expense / maxVal) * 136}px`,
                                                         }}
                                                     />
@@ -269,7 +269,7 @@ const GlobalView = () => {
     // MOBILE LAYOUT (inchangé)
     // ──────────────────────────────────────────────
     return (
-        <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+        <div className="fade-in" style={{ minHeight: '100vh', background: 'transparent', paddingBottom: 76 }}>
             <TopBar title="Vue Globale" />
 
             <div style={{ padding: '16px 16px', maxWidth: 480, margin: '0 auto' }}>
@@ -284,7 +284,7 @@ const GlobalView = () => {
                             style={{ 
                                 border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
                                 cursor: 'pointer', transition: 'all 0.2s',
-                                background: !showForecast ? '#5C6EFF' : 'transparent',
+                                background: !showForecast ? '#A0D2EB' : 'transparent',
                                 color: !showForecast ? 'white' : '#B0B8C9'
                             }}
                         >
@@ -295,7 +295,7 @@ const GlobalView = () => {
                             style={{ 
                                 border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, 
                                 cursor: 'pointer', transition: 'all 0.2s',
-                                background: showForecast ? '#5C6EFF' : 'transparent',
+                                background: showForecast ? '#A0D2EB' : 'transparent',
                                 color: showForecast ? 'white' : '#B0B8C9'
                             }}
                         >
@@ -309,13 +309,13 @@ const GlobalView = () => {
                 ) : (
                     <>
                         {/* All-time Balance Card */}
-                        <div className="card fade-up" style={{ padding: '24px 20px', marginBottom: 14, background: 'linear-gradient(135deg, #1a1a2e 0%, #2a2a4a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div className="card fade-up" style={{ padding: '24px 20px', marginBottom: 14, background: 'linear-gradient(135deg, #4A6984 0%, #2a2a4a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div>
                                 <p style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Solde Total (Tous les mois)</p>
                                 <p style={{ fontSize: 26, fontWeight: 900, color: 'white' }}>{allTimeBalance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
                             </div>
                             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Globe size={20} color="#5C6EFF" />
+                                <Globe size={20} color="#A0D2EB" />
                             </div>
                         </div>
 
@@ -332,7 +332,7 @@ const GlobalView = () => {
                                         <Icon size={18} style={{ color }} />
                                     </div>
                                     <p style={{ fontSize: 10, color: '#B0B8C9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{label}</p>
-                                    <p style={{ fontSize: 16, fontWeight: 900, color: '#1a1a2e' }}>{value}</p>
+                                    <p style={{ fontSize: 16, fontWeight: 900, color: '#4A6984' }}>{value}</p>
                                 </div>
                             ))}
                         </div>
@@ -340,13 +340,13 @@ const GlobalView = () => {
                         {/* Bar chart */}
                         <div className="card fade-up" style={{ padding: '20px', marginBottom: 14 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                                <p style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Évolution mensuelle</p>
+                                <p style={{ fontSize: 14, fontWeight: 700, color: '#4A6984' }}>Évolution mensuelle</p>
                                 <div style={{ display: 'flex', gap: 12, fontSize: 11, fontWeight: 600, color: '#B0B8C9' }}>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#5C6EFF' }} />Revenus
+                                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#A0D2EB' }} />Revenus
                                     </span>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#9B5CFF' }} />Dépenses
+                                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#E5BA73' }} />Dépenses
                                     </span>
                                 </div>
                             </div>
@@ -354,8 +354,8 @@ const GlobalView = () => {
                                 {months.map((m, i) => (
                                     <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
                                         <div style={{ width: '100%', display: 'flex', gap: 2, alignItems: 'flex-end', height: 96 }}>
-                                            <div style={{ flex: 1, background: '#5C6EFF', borderRadius: '4px 4px 0 0', height: `${(m.income / maxVal) * 96}px`, minHeight: 2, transition: 'height .7s ease' }} />
-                                            <div style={{ flex: 1, background: '#9B5CFF', borderRadius: '4px 4px 0 0', height: `${(m.expense / maxVal) * 96}px`, minHeight: 2, transition: 'height .7s ease' }} />
+                                            <div style={{ flex: 1, background: '#A0D2EB', borderRadius: '4px 4px 0 0', height: `${(m.income / maxVal) * 96}px`, minHeight: 2, transition: 'height .7s ease' }} />
+                                            <div style={{ flex: 1, background: '#E5BA73', borderRadius: '4px 4px 0 0', height: `${(m.expense / maxVal) * 96}px`, minHeight: 2, transition: 'height .7s ease' }} />
                                         </div>
                                         <span style={{ fontSize: 9, color: '#B0B8C9', fontWeight: 600, marginTop: 4, textTransform: 'capitalize' }}>{m.label}</span>
                                     </div>
@@ -365,7 +365,7 @@ const GlobalView = () => {
 
                         {/* Monthly table */}
                         <div className="card fade-up" style={{ padding: '20px' }}>
-                            <p style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Détail par mois</p>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: '#4A6984', marginBottom: 14 }}>Détail par mois</p>
                             {months.map((m, i) => (
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: i < months.length - 1 ? '1px solid #F5F7FF' : 'none' }}>
                                     <span style={{ fontSize: 13, fontWeight: 600, color: '#555', minWidth: 52, textTransform: 'capitalize' }}>{m.label}</span>

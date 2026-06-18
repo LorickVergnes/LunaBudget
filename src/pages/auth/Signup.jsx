@@ -40,17 +40,17 @@ const Signup = () => {
 
   if (success) {
     return (
-      <div style={{ minHeight: '100vh', background: '#EEF2FB', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+      <div style={{ minHeight: '100vh', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
         <div className="card" style={{ width: '100%', maxWidth: 440, padding: 32, textAlign: 'center' }}>
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#22c55e15', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
             <CheckCircle2 size={40} color="#22c55e" />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e', marginBottom: 16 }}>Vérifiez vos emails !</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#4A6984', marginBottom: 16 }}>Vérifiez vos emails !</h1>
           <p style={{ fontSize: 14, color: '#555', fontWeight: 500, lineHeight: 1.6, marginBottom: 28 }}>
-            Nous avons envoyé un lien de confirmation à <strong style={{color: '#1a1a2e'}}>{email}</strong>.<br/><br/>
+            Nous avons envoyé un lien de confirmation à <strong style={{color: '#4A6984'}}>{email}</strong>.<br/><br/>
             Veuillez confirmer votre compte pour commencer à gérer votre budget.
           </p>
-          <Link to="/login" style={{ color: '#5C6EFF', fontWeight: 700, textDecoration: 'none', background: '#5C6EFF15', padding: '12px 24px', borderRadius: 99, display: 'inline-block' }}>
+          <Link to="/login" style={{ color: '#A0D2EB', fontWeight: 700, textDecoration: 'none', background: '#A0D2EB15', padding: '12px 24px', borderRadius: 99, display: 'inline-block' }}>
             Retourner à la connexion
           </Link>
         </div>
@@ -59,14 +59,14 @@ const Signup = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#EEF2FB', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+    <div style={{ minHeight: '100vh', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg,#5C6EFF,#9B5CFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 8px 24px rgba(92,110,255,.35)' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg,#A0D2EB,#E5BA73)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 8px 24px rgba(160,210,235,.35)' }}>
             <User size={30} color="white" />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e', marginBottom: 6 }}>Créer un compte</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#4A6984', marginBottom: 6 }}>Créer un compte</h1>
           <p style={{ fontSize: 14, color: '#B0B8C9', fontWeight: 500 }}>Commencez à épargner intelligemment</p>
         </div>
 
@@ -103,7 +103,7 @@ const Signup = () => {
               </div>
             </div>
             <button type="submit" disabled={loading}
-              style={{ background: 'linear-gradient(135deg,#5C6EFF,#9B5CFF)', color: 'white', border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 6px 20px rgba(92,110,255,.4)', marginTop: 4 }}>
+              style={{ background: 'linear-gradient(135deg,#A0D2EB,#E5BA73)', color: 'white', border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 6px 20px rgba(160,210,235,.4)', marginTop: 4 }}>
               {loading ? <Loader2 size={20} className="animate-spin-smooth" /> : <><span>S'inscrire</span><ArrowRight size={18} /></>}
             </button>
           </form>
@@ -111,7 +111,7 @@ const Signup = () => {
 
         <p style={{ textAlign: 'center', fontSize: 14, color: '#B0B8C9', fontWeight: 500, marginTop: 20 }}>
           Déjà un compte ?{' '}
-          <Link to="/login" style={{ color: '#5C6EFF', fontWeight: 700, textDecoration: 'none' }}>Se connecter</Link>
+          <Link to="/login" style={{ color: '#A0D2EB', fontWeight: 700, textDecoration: 'none' }}>Se connecter</Link>
         </p>
       </div>
     </div>

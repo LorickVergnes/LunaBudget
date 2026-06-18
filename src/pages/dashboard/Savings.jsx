@@ -21,14 +21,14 @@ import { getIconComponent } from '../../lib/iconRegistry';
 import ColorPicker from '../../components/ui/ColorPicker';
 import useDesktop from '../../hooks/useDesktop';
 
-const ACCENT = '#5C6EFF';
+const ACCENT = '#A0D2EB';
 
 const fmt = (num) => num.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
 
 const ProgressLinear = ({ value, max, color, height = 6 }) => {
   const pct = Math.min((value / Math.max(max, 1)) * 100, 100);
   return (
-    <div style={{ height, borderRadius: 99, background: '#EEF2FB', overflow: 'hidden' }}>
+    <div style={{ height, borderRadius: 99, background: 'transparent', overflow: 'hidden' }}>
       <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: color, transition: 'width .7s ease' }} />
     </div>
   );
@@ -43,7 +43,7 @@ const IconBubble = ({ icon, color, size = 42 }) => {
   );
 };
 
-const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#EEF2FB', label, sublabel }) => {
+const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#F4F7F6', label, sublabel }) => {
   const pct = Math.min(value / Math.max(max, 1), 1);
   const r = (size - stroke) / 2;
   const cx = size / 2, cy = size / 2;
@@ -58,7 +58,7 @@ const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, track
       </svg>
       {(label || sublabel) && (
         <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
-          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: '#1a1a2e', display: 'block' }}>{label}</span>}
+          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: '#4A6984', display: 'block' }}>{label}</span>}
           {sublabel && <span style={{ fontSize: size * 0.09, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>{sublabel}</span>}
         </div>
       )}
@@ -188,14 +188,14 @@ const Savings = () => {
       <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <AmountInput value={formData.target_amount} onChange={e => setFormData({ ...formData, target_amount: e.target.value })} color="#9CA3AF" />
         <FormCard>
-          <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 4 }}>Nom</label>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Nom</label>
           <input type="text" required placeholder="Voyage, Voiture, Urgences..." value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
             style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} />
         </FormCard>
         <FormCard style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setFormData({ ...formData, is_recurrent: !formData.is_recurrent })}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 4 }}>Objectif récurrent</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Objectif récurrent</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 20, height: 20, borderRadius: 6, border: formData.is_recurrent ? 'none' : '2px solid #D1D5DB', background: formData.is_recurrent ? '#3B82F6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {formData.is_recurrent && <Check size={14} color="white" />}
@@ -206,7 +206,7 @@ const Savings = () => {
         </FormCard>
         {formData.is_recurrent && (
           <FormCard>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 4 }}>Date de fin (Optionnel)</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Date de fin (Optionnel)</label>
             <span style={{ fontSize: 12, color: '#9CA3AF', display: 'block', marginBottom: 8 }}>Mois et année finaux d'application pour cet objectif.</span>
             <input type="month" value={formData.max_month} onChange={e => setFormData({ ...formData, max_month: e.target.value })}
               style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} />
@@ -245,12 +245,12 @@ const Savings = () => {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <IconBubble icon={s.icon} color={s.color || '#F9A825'} size={48} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 16, cursor: 'pointer' }} onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}>{s.name}</div>
+              <div style={{ fontWeight: 800, color: '#4A6984', fontSize: 16, cursor: 'pointer' }} onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}>{s.name}</div>
               <div style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600, marginTop: 2 }}>
                 {over ? "Objectif atteint 🎉" : `Reste ${fmt(remaining)}`}
               </div>
             </div>
-            <div style={{ background: '#EEF2FB', color: '#5C6EFF', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+            <div style={{ background: 'transparent', color: '#A0D2EB', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
               {pct}%
             </div>
           </div>
@@ -260,11 +260,11 @@ const Savings = () => {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 700 }}>ACTUEL</div>
-                <div style={{ fontWeight: 800, color: '#1a1a2e' }}>{fmt(current)}</div>
+                <div style={{ fontWeight: 800, color: '#4A6984' }}>{fmt(current)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 700 }}>OBJECTIF</div>
-                <div style={{ fontWeight: 800, color: '#1a1a2e' }}>{fmt(target)}</div>
+                <div style={{ fontWeight: 800, color: '#4A6984' }}>{fmt(target)}</div>
               </div>
             </div>
           </div>
@@ -276,10 +276,10 @@ const Savings = () => {
               onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}
               style={{
                 flex: 1, padding: '10px', borderRadius: 12,
-                background: 'linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%)', color: '#fff',
+                background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', color: '#fff',
                 fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                boxShadow: '0 6px 14px rgba(92,110,255,.3)',
+                boxShadow: '0 6px 14px rgba(160,210,235,.3)',
               }}
             >
               <Plus size={14} /> Alimenter
@@ -288,7 +288,7 @@ const Savings = () => {
               onClick={(e) => openEdit(e, s)}
               style={{
                 padding: '10px 14px', borderRadius: 12,
-                background: '#F5F7FF', color: '#5C6EFF',
+                background: '#F5F7FF', color: '#A0D2EB',
                 fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
               }}
             >
@@ -316,7 +316,7 @@ const Savings = () => {
           <IconBubble icon={s.icon} color={s.color || '#F9A825'} size={44} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 15, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }} onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}>{s.name}</div>
+              <div style={{ fontWeight: 800, color: '#4A6984', fontSize: 15, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }} onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}>{s.name}</div>
               <div style={{
                 fontSize: 11, fontWeight: 800, color: s.color || '#F9A825',
                 background: `${s.color || '#F9A825'}1A`, padding: '3px 8px', borderRadius: 999, flexShrink: 0
@@ -329,7 +329,7 @@ const Savings = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 12, fontSize: 13, fontWeight: 700 }}>
-          <span style={{ color: '#1a1a2e', fontWeight: 800, fontSize: 16 }}>{fmt(current)}</span>
+          <span style={{ color: '#4A6984', fontWeight: 800, fontSize: 16 }}>{fmt(current)}</span>
           <span style={{ color: '#B0B8C9' }}>{fmt(target)}</span>
         </div>
         <div style={{ marginTop: 6 }}>
@@ -341,10 +341,10 @@ const Savings = () => {
             onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}
             style={{
               flex: 1, padding: '9px', borderRadius: 11,
-              background: 'linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%)', color: '#fff',
+              background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', color: '#fff',
               fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              boxShadow: '0 6px 14px rgba(92,110,255,.28)',
+              boxShadow: '0 6px 14px rgba(160,210,235,.28)',
             }}
           >
             <Plus size={14} /> Alimenter
@@ -353,7 +353,7 @@ const Savings = () => {
             onClick={(e) => openEdit(e, s)}
             style={{
               padding: '9px 14px', borderRadius: 11,
-              background: '#F5F7FF', color: '#5C6EFF',
+              background: '#F5F7FF', color: '#A0D2EB',
               fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
             }}
           >
@@ -398,7 +398,7 @@ const Savings = () => {
 
             {loading && !showForm ? <LoadingSpinner color="#F9A825" /> : (
               <div>
-                <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%)', color: 'white', border: 'none' }}>
+                <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', color: 'white', border: 'none' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <div style={{ fontSize: 12, opacity: .85, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
@@ -433,7 +433,7 @@ const Savings = () => {
 
   // ── MOBILE ──
   return (
-    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: 'transparent' }}>
       <TopBar title="Épargne" />
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <div style={{ marginBottom: 24 }}>
@@ -442,7 +442,7 @@ const Savings = () => {
 
         {loading && !showForm ? <LoadingSpinner color="#F9A825" /> : (
           <>
-            <div className="fade-up" style={{ padding: 20, background: 'linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%)', borderRadius: 18, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(92,110,255,0.3)' }}>
+            <div className="fade-up" style={{ padding: 20, background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', borderRadius: 18, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }}>
               <div style={{ fontSize: 11, opacity: .85, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5 }}>
                 Patrimoine épargné
               </div>

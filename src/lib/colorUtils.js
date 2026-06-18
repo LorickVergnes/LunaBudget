@@ -1,9 +1,9 @@
 export const ALL_COLORS = [
-  '#5C6EFF', // Bleu
+  '#A0D2EB', // Bleu
   '#22c55e', // Vert
   '#F9A825', // Orange
   '#ef4444', // Rouge
-  '#9B5CFF', // Violet
+  '#E5BA73', // Violet
   '#06b6d4', // Cyan
   '#f43f5e', // Rose
   '#ec4899', // Rose clair

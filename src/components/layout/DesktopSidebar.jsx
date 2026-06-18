@@ -3,10 +3,10 @@ import { NavLink } from 'react-router-dom';
 import { PieChart, CreditCard, Mail, PiggyBank, Globe, LayoutDashboard, Settings } from 'lucide-react';
 
 const SIDEBAR_ITEMS = [
-  { to: '/', icon: LayoutDashboard, label: 'Budget', exact: true, color: '#9B5CFF' },
-  { to: '/global', icon: Globe, label: 'Global', color: '#5C6EFF' },
-  { to: '/incomes', icon: CreditCard, label: 'Revenus', color: '#5C6EFF' },
-  { to: '/expenses', icon: CreditCard, label: 'Dépenses', color: '#9B5CFF' },
+  { to: '/', icon: LayoutDashboard, label: 'Budget', exact: true, color: '#E5BA73' },
+  { to: '/global', icon: Globe, label: 'Global', color: '#A0D2EB' },
+  { to: '/incomes', icon: CreditCard, label: 'Revenus', color: '#A0D2EB' },
+  { to: '/expenses', icon: CreditCard, label: 'Dépenses', color: '#E5BA73' },
   { to: '/envelopes', icon: Mail, label: 'Enveloppes', color: '#5CBEFF' },
   { to: '/savings', icon: PiggyBank, label: 'Épargne', color: '#F9A825' },
 ];
@@ -44,12 +44,12 @@ const DesktopSidebar = () => {
         {({ isActive }) => (
           <div
             className="desktop-sidebar-icon-wrap"
-            style={{ background: isActive ? '#5C6EFF1A' : 'transparent' }}
+            style={{ background: isActive ? '#A0D2EB1A' : 'transparent' }}
           >
             <Settings
               size={22}
               strokeWidth={isActive ? 2.5 : 1.8}
-              style={{ color: isActive ? '#5C6EFF' : '#B0B8C9', transition: 'all 0.2s' }}
+              style={{ color: isActive ? '#A0D2EB' : '#B0B8C9', transition: 'all 0.2s' }}
             />
           </div>
         )}

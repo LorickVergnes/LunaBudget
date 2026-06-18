@@ -10,14 +10,19 @@
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #EEF2FB;
-  color: #1a1a2e;
+  background: #F4F7F6;
+  background-attachment: fixed;
+  color: #4A6984;
   overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+  isolation: isolate; /* Create a stacking context if needed, or leave normal */
 }
 
 /* Scrollbar hide */
@@ -107,9 +112,12 @@ body,
 
 /* Card */
 .card {
-  background: white;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px rgba(74, 105, 132, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 /* Input style */
@@ -121,13 +129,13 @@ body,
   border-radius: 12px;
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #4A6984;
   outline: none;
   transition: border-color .2s;
 }
 
 .field:focus {
-  border-color: #5C6EFF;
+  border-color: #A0D2EB;
 }
 
 /* Donut chart */
@@ -157,7 +165,7 @@ svg.donut {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: #EEF2FB;
+    background: transparent;
   }
 
   /* Hide mobile-only elements on desktop */
@@ -170,7 +178,7 @@ svg.donut {
     display: flex;
     align-items: center;
     background: white;
-    border-bottom: 1px solid #EEF2FB;
+    border-bottom: 1px solid #F4F7F6;
     box-shadow: 0 1px 6px rgba(0,0,0,0.05);
     padding: 0 28px;
     height: 66px;
@@ -200,7 +208,7 @@ svg.donut {
   .desktop-header-logo-text {
     font-size: 18px;
     font-weight: 900;
-    color: #1a1a2e;
+    color: #4A6984;
     letter-spacing: -0.3px;
   }
 
@@ -225,11 +233,11 @@ svg.donut {
 
   .desktop-nav-tab:hover {
     background: #F5F7FF;
-    color: #1a1a2e;
+    color: #4A6984;
   }
 
   .desktop-nav-tab--active {
-    background: #1a1a2e;
+    background: #4A6984;
     color: white !important;
   }
 
@@ -252,7 +260,7 @@ svg.donut {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #9B5CFF, #5C6EFF);
+    background: linear-gradient(135deg, #E5BA73, #A0D2EB);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -274,7 +282,7 @@ svg.donut {
   .desktop-header-username {
     font-size: 13px;
     font-weight: 700;
-    color: #1a1a2e;
+    color: #4A6984;
     line-height: 1.2;
   }
 
@@ -317,7 +325,7 @@ svg.donut {
   .desktop-sidebar {
     width: 72px;
     background: white;
-    border-right: 1px solid #EEF2FB;
+    border-right: 1px solid #F4F7F6;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -373,7 +381,7 @@ svg.donut {
   .desktop-greeting h1 {
     font-size: 28px;
     font-weight: 900;
-    color: #1a1a2e;
+    color: #4A6984;
     margin-bottom: 4px;
   }
 
@@ -416,7 +424,7 @@ svg.donut {
   }
 
   .desktop-toggle-btn--active {
-    background: #5C6EFF;
+    background: #A0D2EB;
     color: white;
   }
 
@@ -436,7 +444,7 @@ svg.donut {
   }
 
   .desktop-kpi-card--highlight {
-    background: linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%);
+    background: linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%);
     color: white;
   }
 
@@ -459,7 +467,7 @@ svg.donut {
   .desktop-kpi-value {
     font-size: 26px;
     font-weight: 900;
-    color: #1a1a2e;
+    color: #4A6984;
     letter-spacing: -0.5px;
   }
 
@@ -507,7 +515,7 @@ svg.donut {
   .desktop-card-title {
     font-size: 14px;
     font-weight: 800;
-    color: #1a1a2e;
+    color: #4A6984;
     margin-bottom: 16px;
   }
 
@@ -549,13 +557,13 @@ svg.donut {
     flex: 1;
     font-size: 14px;
     font-weight: 600;
-    color: #1a1a2e;
+    color: #4A6984;
   }
 
   .desktop-budget-row-amount {
     font-size: 14px;
     font-weight: 800;
-    color: #1a1a2e;
+    color: #4A6984;
   }
 
   .desktop-budget-total-row {
@@ -620,7 +628,7 @@ svg.donut {
   .desktop-donut-legend-pct {
     font-size: 14px;
     font-weight: 800;
-    color: #1a1a2e;
+    color: #4A6984;
   }
 
   /* Alert in donut */
@@ -651,7 +659,7 @@ svg.donut {
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    background: #EEF2FB;
+    background: #F4F7F6;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -660,7 +668,7 @@ svg.donut {
 
   /* ── GlobalView desktop ── */
   .desktop-global-hero {
-    background: linear-gradient(135deg, #1a1a2e 0%, #2a2a4a 100%);
+    background: linear-gradient(135deg, #4A6984 0%, #2a2a4a 100%);
     border-radius: 18px;
     padding: 28px 28px;
     margin-bottom: 18px;
@@ -731,7 +739,7 @@ svg.donut {
   .desktop-global-kpi-value {
     font-size: 17px;
     font-weight: 900;
-    color: #1a1a2e;
+    color: #4A6984;
   }
 
   .desktop-chart-card {

@@ -2,7 +2,7 @@ import React from 'react';
 
 const LoadingSpinner = ({ 
   size = 40, 
-  color = '#5C6EFF', 
+  color = '#A0D2EB', 
   fullHeight = false,
   message = "" 
 }) => {

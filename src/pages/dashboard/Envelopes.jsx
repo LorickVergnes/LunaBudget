@@ -23,14 +23,14 @@ import ColorPicker from '../../components/ui/ColorPicker';
 import { ALL_COLORS } from '../../lib/colorUtils';
 import useDesktop from '../../hooks/useDesktop';
 
-const ACCENT = '#5C6EFF';
+const ACCENT = '#A0D2EB';
 
 const fmt = (num) => num.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
 
 const ProgressLinear = ({ value, max, color, height = 6 }) => {
   const pct = Math.min((value / Math.max(max, 1)) * 100, 100);
   return (
-    <div style={{ height, borderRadius: 99, background: '#EEF2FB', overflow: 'hidden' }}>
+    <div style={{ height, borderRadius: 99, background: 'transparent', overflow: 'hidden' }}>
       <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: color, transition: 'width .7s ease' }} />
     </div>
   );
@@ -45,7 +45,7 @@ const IconBubble = ({ icon, color, size = 42 }) => {
   );
 };
 
-const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#EEF2FB', label, sublabel }) => {
+const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#F4F7F6', label, sublabel }) => {
   const pct = Math.min(value / Math.max(max, 1), 1);
   const r = (size - stroke) / 2;
   const cx = size / 2, cy = size / 2;
@@ -60,7 +60,7 @@ const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, track
       </svg>
       {(label || sublabel) && (
         <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
-          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: '#1a1a2e', display: 'block' }}>{label}</span>}
+          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: '#4A6984', display: 'block' }}>{label}</span>}
           {sublabel && <span style={{ fontSize: size * 0.09, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>{sublabel}</span>}
         </div>
       )}
@@ -190,14 +190,14 @@ const Envelopes = () => {
       <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <AmountInput value={formData.max_amount} onChange={e => setFormData({ ...formData, max_amount: e.target.value })} color="#9CA3AF" />
         <FormCard>
-          <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 4 }}>Nom</label>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Nom</label>
           <input type="text" required placeholder="Alimentation, Loisirs..." value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
             style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} />
         </FormCard>
         <FormCard style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setFormData({ ...formData, is_recurrent: !formData.is_recurrent })}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 4 }}>Reporter chaque mois</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Reporter chaque mois</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 20, height: 20, borderRadius: 6, border: formData.is_recurrent ? 'none' : '2px solid #D1D5DB', background: formData.is_recurrent ? '#3B82F6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {formData.is_recurrent && <Check size={14} color="white" />}
@@ -243,7 +243,7 @@ const Envelopes = () => {
             >
               <IconBubble icon={e.icon} color={e.color || ACCENT} size={44} />
               <div>
-                <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 15 }}>{e.name}</div>
+                <div style={{ fontWeight: 800, color: '#4A6984', fontSize: 15 }}>{e.name}</div>
                 <div style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600 }}>{over ? "Dépassé" : `${pct}% utilisé`}</div>
               </div>
             </div>
@@ -257,7 +257,7 @@ const Envelopes = () => {
             <ProgressLinear value={spent} max={target} color={over ? '#EF4444' : (e.color || ACCENT)} height={8} />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, fontWeight: 700 }}>
               <span style={{ color: '#8892a4' }}>{fmt(spent)}</span>
-              <span style={{ color: '#1a1a2e' }}>{fmt(target)}</span>
+              <span style={{ color: '#4A6984' }}>{fmt(target)}</span>
             </div>
           </div>
   
@@ -266,7 +266,7 @@ const Envelopes = () => {
               onClick={(ev) => openEdit(ev, e)}
               style={{
                 flex: 1, padding: '10px', borderRadius: 12,
-                background: '#F5F7FF', color: '#5C6EFF',
+                background: '#E6F0F9', color: '#5695B7',
                 fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
@@ -295,7 +295,7 @@ const Envelopes = () => {
           <IconBubble icon={e.icon} color={e.color || ACCENT} size={42} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{e.name}</div>
+              <div style={{ fontWeight: 800, color: '#4A6984', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{e.name}</div>
               <div style={{
                 fontSize: 11, fontWeight: 800,
                 color: over ? "#EF4444" : (e.color || ACCENT),
@@ -315,7 +315,7 @@ const Envelopes = () => {
           <ProgressLinear value={spent} max={target} color={over ? '#EF4444' : (e.color || ACCENT)} height={8} />
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button onClick={(ev) => openEdit(ev, e)} style={{ flex: 1, padding: '8px', borderRadius: 10, background: '#F5F7FF', color: '#5C6EFF', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <button onClick={(ev) => openEdit(ev, e)} style={{ flex: 1, padding: '8px', borderRadius: 10, background: '#E6F0F9', color: '#5695B7', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Pencil size={12} /> Modifier
           </button>
           <button onClick={(ev) => del(ev, e)} style={{ padding: '8px 12px', borderRadius: 10, background: '#FEECEC', color: '#DC2626', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}>
@@ -342,7 +342,7 @@ const Envelopes = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
                 <button onClick={() => { resetForm(); setShowForm(true); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: ACCENT, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(92,110,255,0.35)' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: ACCENT, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(160,210,235,0.35)' }}>
                   <Plus size={18} /> Nouvelle enveloppe
                 </button>
               </div>
@@ -355,11 +355,11 @@ const Envelopes = () => {
                     <SingleDonut value={totalSpent} max={totalBudget} size={140} stroke={14} color={ACCENT} label={`${pctTotal}%`} sublabel="global" />
                     <div style={{ flex: 1, minWidth: 200 }}>
                       <div style={{ fontSize: 13, color: '#B0B8C9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Toutes enveloppes confondues</div>
-                      <div style={{ fontSize: 32, fontWeight: 900, color: '#1a1a2e', marginTop: 4 }}>
+                      <div style={{ fontSize: 32, fontWeight: 900, color: '#4A6984', marginTop: 4 }}>
                         {fmt(totalSpent)} <span style={{ fontSize: 18, color: '#8892a4', fontWeight: 700 }}>/ {fmt(totalBudget)}</span>
                       </div>
                       <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                        <span style={{ background: '#EEF2FB', color: '#5C6EFF', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{envelopes.length} enveloppes</span>
+                        <span style={{ background: 'transparent', color: '#A0D2EB', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{envelopes.length} enveloppes</span>
                         <span style={{ background: '#ECFDF5', color: '#059669', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{fmt(totalBudget - totalSpent)} disponible</span>
                       </div>
                     </div>
@@ -387,7 +387,7 @@ const Envelopes = () => {
 
   // ── MOBILE ──
   return (
-    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: 'transparent' }}>
       <TopBar title="Dépenses variables" />
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
@@ -395,7 +395,7 @@ const Envelopes = () => {
 
         {loading && !showForm ? <LoadingSpinner color={ACCENT} /> : (
           <>
-            <div style={{ background: 'linear-gradient(135deg, #5C6EFF 0%, #9B5CFF 100%)', borderRadius: 18, padding: 20, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(92,110,255,0.3)' }} className="fade-up">
+            <div style={{ background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', borderRadius: 18, padding: 20, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }} className="fade-up">
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <SingleDonut value={totalSpent} max={totalBudget} size={90} stroke={10} color="#fff" trackColor="rgba(255,255,255,.25)" />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -419,7 +419,7 @@ const Envelopes = () => {
       </div>
       {!showForm && (
         <button onClick={() => { resetForm(); setShowForm(true); }}
-          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#5C6EFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(92,110,255,.5)', zIndex: 40 }}>
+          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />
         </button>
       )}

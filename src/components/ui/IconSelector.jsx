@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import BottomModal from './BottomModal';
 import { ICON_REGISTRY, QUICK_ICONS, ALL_ICON_KEYS } from '../../lib/iconRegistry';
 
-const IconSelector = ({ value, onChange, color = '#5C6EFF' }) => {
+const IconSelector = ({ value, onChange, color = '#A0D2EB' }) => {
   const [showAll, setShowAll] = useState(false);
 
   const isSelectedInQuick = QUICK_ICONS.includes(value);
@@ -26,7 +26,7 @@ const IconSelector = ({ value, onChange, color = '#5C6EFF' }) => {
           })()}
         </div>
         <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 2 }}>Apparence Icône</label>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 2 }}>Apparence Icône</label>
           <span style={{ fontSize: 13, color: '#9CA3AF' }}>Cliquez pour choisir</span>
         </div>
       </div>
@@ -65,7 +65,7 @@ const IconSelector = ({ value, onChange, color = '#5C6EFF' }) => {
                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: isSelected ? `${color}22` : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', border: isSelected ? `2px solid ${color}` : '2px solid transparent', transition: 'all 0.2s ease' }}>
                      <IconComp size={24} style={{ color: isSelected ? color : '#6B7280' }} />
                    </div>
-                   <span style={{ fontSize: 10, color: isSelected ? '#1a1a2e' : '#9CA3AF', fontWeight: isSelected ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60px', textAlign: 'center' }}>
+                   <span style={{ fontSize: 10, color: isSelected ? '#4A6984' : '#9CA3AF', fontWeight: isSelected ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60px', textAlign: 'center' }}>
                      {key}
                    </span>
                  </button>

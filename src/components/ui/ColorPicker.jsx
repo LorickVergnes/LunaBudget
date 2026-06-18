@@ -41,7 +41,7 @@ const ColorPicker = ({ value, onChange }) => {
                 height: 32, 
                 borderRadius: '50%', 
                 background: c, 
-                border: isSelected ? '3px solid #1a1a2e' : 'none', 
+                border: isSelected ? '3px solid #4A6984' : 'none', 
                 cursor: 'pointer', 
                 padding: 0,
                 position: 'relative',

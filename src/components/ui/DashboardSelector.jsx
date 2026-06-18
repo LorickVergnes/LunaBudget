@@ -69,11 +69,11 @@ const DashboardSelector = ({ isDesktop = false }) => {
           maxWidth: isDesktop ? 200 : 150
         }}
       >
-        <Layout size={18} style={{ color: '#5C6EFF' }} />
+        <Layout size={18} style={{ color: '#A0D2EB' }} />
         <span style={{ 
           fontSize: 14, 
           fontWeight: 700, 
-          color: '#1a1a2e',
+          color: '#4A6984',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap'
@@ -114,14 +114,14 @@ const DashboardSelector = ({ isDesktop = false }) => {
                     flex: 1,
                     padding: '8px 12px',
                     border: 'none',
-                    background: activeDashboard.id === dash.id ? '#5C6EFF10' : 'transparent',
+                    background: activeDashboard.id === dash.id ? '#A0D2EB10' : 'transparent',
                     borderRadius: 8,
                     cursor: 'pointer',
                     textAlign: 'left'
                   }}
                 >
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeDashboard.id === dash.id ? '#5C6EFF' : '#D1D5DB' }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: activeDashboard.id === dash.id ? '#5C6EFF' : '#4B5563' }}>{dash.name}</span>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeDashboard.id === dash.id ? '#A0D2EB' : '#D1D5DB' }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: activeDashboard.id === dash.id ? '#A0D2EB' : '#4B5563' }}>{dash.name}</span>
                   {dash.owner_id !== user?.id && <Users size={12} style={{ color: '#B0B8C9', marginLeft: 'auto' }} />}
                 </button>
                 {activeDashboard.id === dash.id && isOwner && (
@@ -149,7 +149,7 @@ const DashboardSelector = ({ isDesktop = false }) => {
                 borderRadius: 8,
                 cursor: 'pointer',
                 textAlign: 'left',
-                color: '#5C6EFF'
+                color: '#A0D2EB'
               }}
             >
               <Plus size={16} />
@@ -170,11 +170,11 @@ const DashboardSelector = ({ isDesktop = false }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {activeDashboard.members?.map(member => (
                     <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px', background: '#F9FAFB', borderRadius: 12 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#9B5CFF,#5C6EFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#E5BA73,#A0D2EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>
                             {member.profile?.full_name?.charAt(0).toUpperCase() || '?'}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: '#4A6984', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {member.profile?.full_name || 'Utilisateur inconnu'}
                                 {member.user_id === user?.id && <span style={{ color: '#B0B8C9', fontWeight: 500, fontSize: 12 }}> (Toi)</span>}
                             </p>
@@ -196,7 +196,7 @@ const DashboardSelector = ({ isDesktop = false }) => {
 
             {/* Formulaire d'invitation */}
             <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>Inviter par email</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#4A6984' }}>Inviter par email</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                     <input 
                         type="email" 
@@ -209,7 +209,7 @@ const DashboardSelector = ({ isDesktop = false }) => {
                     <button 
                         type="submit"
                         disabled={isInviting}
-                        style={{ background: '#5C6EFF', color: 'white', border: 'none', borderRadius: 12, padding: '0 16px', cursor: 'pointer' }}
+                        style={{ background: '#A0D2EB', color: 'white', border: 'none', borderRadius: 12, padding: '0 16px', cursor: 'pointer' }}
                     >
                         {isInviting ? '...' : <UserPlus size={20} />}
                     </button>

@@ -105,13 +105,13 @@ const SavingDetail = () => {
   const total = entries.reduce((a, c) => a + parseFloat(c.amount), 0);
 
   return (
-    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: 'transparent' }}>
       <TopBar title={savingName} />
 
       {/* Sub-header for Saving Context */}
       <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => navigate(-1)} style={{ background: '#ffffff', border: '1px solid #E8ECFF', cursor: 'pointer', display: 'flex', padding: '8px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <ArrowLeft size={20} style={{ color: '#1a1a2e' }} />
+          <ArrowLeft size={20} style={{ color: '#4A6984' }} />
         </button>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 13, color: '#B0B8C9', fontWeight: 600, lineHeight: 1 }}>Versements</p>
@@ -137,7 +137,7 @@ const SavingDetail = () => {
                   <HeaderIcon size={20} style={{ color: savingColor }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>Versement</p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: '#4A6984', marginBottom: 2 }}>Versement</p>
                   <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
                     {parseFloat(entry.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {new Date(entry.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </p>
@@ -174,7 +174,7 @@ const SavingDetail = () => {
           setEditingId(null);
           setShowForm(true);
         }}
-          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#5C6EFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(92,110,255,.5)', zIndex: 40 }}>
+          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />
         </button>
       )}
@@ -192,7 +192,7 @@ const SavingDetail = () => {
           <FormCard style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <Calendar size={22} style={{ color: '#9CA3AF' }} />
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 2 }}>Date</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 2 }}>Date</label>
               <input 
                 type="date" 
                 required

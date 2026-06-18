@@ -18,7 +18,7 @@ export const FormCard = ({ children, style = {}, onClick }) => (
 );
 
 // AmountInput: Large, thin text input specifically for amounts
-export const AmountInput = ({ value, onChange, color = '#1a1a2e', autoFocus = false }) => (
+export const AmountInput = ({ value, onChange, color = '#4A6984', autoFocus = false }) => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
     <input 
       type="number" 

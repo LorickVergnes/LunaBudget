@@ -23,7 +23,7 @@ const EnvelopeDetail = () => {
   const { selectedDate } = useMonth();
   const [envelopeName] = useState(location.state?.name || 'Enveloppe');
   const envelopeIcon = location.state?.icon || 'Wallet';
-  const envelopeColor = location.state?.color || '#5C6EFF';
+  const envelopeColor = location.state?.color || '#A0D2EB';
   const HeaderIcon = getIconComponent(envelopeIcon);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ const EnvelopeDetail = () => {
       envelope_id: id, 
       month_date: formatMonthDate(selectedDate), 
       icon: 'ShoppingCart', 
-      color: '#5C6EFF' 
+      color: '#A0D2EB' 
     };
     if (editingId) {
       const { error } = await supabase.from('envelope_expenses').update(data).eq('id', editingId);
@@ -107,25 +107,25 @@ const EnvelopeDetail = () => {
   const total = expenses.reduce((a, c) => a + parseFloat(c.amount), 0);
 
   return (
-    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: '#EEF2FB' }}>
+    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: 'transparent' }}>
       <TopBar title={envelopeName} />
       
       {/* Sub-header for Envelope Context */}
       <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => navigate(-1)} style={{ background: '#ffffff', border: '1px solid #E8ECFF', cursor: 'pointer', display: 'flex', padding: '8px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <ArrowLeft size={20} style={{ color: '#1a1a2e' }} />
+          <ArrowLeft size={20} style={{ color: '#4A6984' }} />
         </button>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 13, color: '#B0B8C9', fontWeight: 600, lineHeight: 1 }}>Détail Enveloppe</p>
         </div>
-        <span style={{ fontSize: 16, fontWeight: 800, color: '#5C6EFF', background: '#5C6EFF15', padding: '6px 12px', borderRadius: '12px' }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: '#A0D2EB', background: '#A0D2EB15', padding: '6px 12px', borderRadius: '12px' }}>
           {total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
         </span>
       </div>
 
       <div style={{ padding: '0px 16px', maxWidth: 480, margin: '0 auto' }}>
         {loading && !showForm ? (
-          <LoadingSpinner color="#5C6EFF" />
+          <LoadingSpinner color="#A0D2EB" />
         ) : expenses.length === 0 ? (
           <div className="card" style={{ padding: '60px 20px', textAlign: 'center', marginTop: 16 }}>
             <HeaderIcon size={40} style={{ color: '#D1D5DB', margin: '0 auto 12px' }} />
@@ -139,7 +139,7 @@ const EnvelopeDetail = () => {
                   <HeaderIcon size={20} style={{ color: envelopeColor }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{exp.name}</p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: '#4A6984', marginBottom: 2 }}>{exp.name}</p>
                   <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
                     {parseFloat(exp.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {new Date(exp.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </p>
@@ -176,7 +176,7 @@ const EnvelopeDetail = () => {
           setEditingId(null);
           setShowForm(true);
         }}
-          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#5C6EFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(92,110,255,.5)', zIndex: 40 }}>
+          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />
         </button>
       )}
@@ -192,7 +192,7 @@ const EnvelopeDetail = () => {
           />
 
           <FormCard>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 4 }}>Nom</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Nom</label>
             <input 
               type="text" 
               required 
@@ -206,7 +206,7 @@ const EnvelopeDetail = () => {
           <FormCard style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <Calendar size={22} style={{ color: '#9CA3AF' }} />
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 2 }}>Date</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 2 }}>Date</label>
               <input 
                 type="date" 
                 required

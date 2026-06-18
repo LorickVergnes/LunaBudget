@@ -19,7 +19,7 @@ const DonutChart = ({ segments, total, size = 140, centerLabel = "Total", limit 
         <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#FFFFFF" />
         
         {/* Background track (Light gray) if total is 0 or to fill empty space */}
-        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#EEF2FB" />
+        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={16} stroke="#F4F7F6" />
 
         {processedSegments.map((seg, i) => {
           const pct = processedTotal > 0 ? seg.value / processedTotal : 0;
@@ -52,7 +52,7 @@ const DonutChart = ({ segments, total, size = 140, centerLabel = "Total", limit 
         })}
       </svg>
       <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
-        <span style={{ fontSize: Math.max(12, 16 * scale), fontWeight: 900, color: '#1a1a2e', display: 'block' }}>
+        <span style={{ fontSize: Math.max(12, 16 * scale), fontWeight: 900, color: '#4A6984', display: 'block' }}>
           {processedTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
         </span>
         <span style={{ fontSize: Math.max(8, 10 * scale), fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 1 * scale }}>

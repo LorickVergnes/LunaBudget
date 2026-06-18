@@ -43,12 +43,12 @@ const Account = () => {
   };
 
   return (
-    <div className="fade-in" style={{ minHeight: '100vh', background: '#EEF2FB', paddingBottom: 76 }}>
+    <div className="fade-in" style={{ minHeight: '100vh', background: 'transparent', paddingBottom: 76 }}>
       <TopBar title="Mon Profil" />
 
       <div style={{ padding: '20px 16px', maxWidth: 480, margin: '0 auto' }}>
         <div className="card fade-up" style={{ padding: '24px 20px', marginTop: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e', marginBottom: 20 }}>Informations du compte</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#4A6984', marginBottom: 20 }}>Informations du compte</h2>
           
           {message.text && (
             <div style={{ 
@@ -112,7 +112,7 @@ const Account = () => {
                 style={{ 
                   width: '100%', padding: '12px 16px', borderRadius: '12px', 
                   border: '1px solid #E8ECFF', background: 'white', 
-                  color: '#1a1a2e', fontSize: 15, fontWeight: 600, outline: 'none'
+                  color: '#4A6984', fontSize: 15, fontWeight: 600, outline: 'none'
                 }} 
               />
             </div>
@@ -121,10 +121,10 @@ const Account = () => {
               type="submit" 
               disabled={loading}
               style={{ 
-                background: '#5C6EFF', color: 'white', border: 'none', borderRadius: '14px', 
+                background: '#A0D2EB', color: 'white', border: 'none', borderRadius: '14px', 
                 padding: '14px', fontSize: 15, fontWeight: 800, cursor: 'pointer', 
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, 
-                boxShadow: '0 4px 14px rgba(92,110,255,0.4)', marginTop: 12
+                boxShadow: '0 4px 14px rgba(160,210,235,0.4)', marginTop: 12
               }}
             >
               {loading ? <Loader2 size={18} className="animate-spin-smooth" /> : 'Mettre à jour'}

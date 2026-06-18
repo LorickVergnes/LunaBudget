@@ -15,6 +15,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 import { MonthProvider } from './contexts/MonthContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { DashboardProvider } from './contexts/DashboardContext';
+import AmbientOrbs from './components/ui/AmbientOrbs';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -35,6 +36,7 @@ function App() {
     <AuthProvider>
       <DashboardProvider>
         <MonthProvider>
+          <AmbientOrbs />
           <Router>
             <Routes>
             <Route path="/login" element={<Login />} />

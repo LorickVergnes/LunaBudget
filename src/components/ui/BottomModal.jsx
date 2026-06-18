@@ -129,7 +129,7 @@ const BottomModal = ({ isOpen, onClose, title, children }) => {
         </div>
         
         {/* Title */}
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', textAlign: 'center', marginBottom: 16 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#4A6984', textAlign: 'center', marginBottom: 16 }}>
           {title}
         </h2>
 

@@ -3,19 +3,19 @@ import { NavLink } from 'react-router-dom';
 import { CreditCard, Mail, Wallet, PiggyBank, PieChart } from 'lucide-react';
 
 const TABS = [
-    { to: '/incomes', label: 'Revenus', Icon: CreditCard, color: '#5C6EFF' },
-    { to: '/expenses', label: 'Dépenses', Icon: CreditCard, color: '#9B5CFF' },
-    { to: '/envelopes', label: 'Enveloppes', Icon: Mail, color: '#5C6EFF' },
+    { to: '/incomes', label: 'Revenus', Icon: CreditCard, color: '#A0D2EB' },
+    { to: '/expenses', label: 'Dépenses', Icon: CreditCard, color: '#E5BA73' },
+    { to: '/envelopes', label: 'Enveloppes', Icon: Mail, color: '#A0D2EB' },
     { to: '/savings', label: 'Épargne', Icon: PiggyBank, color: '#F9A825' },
-    { to: '/', label: 'Budget', Icon: PieChart, color: '#9B5CFF', exact: true },
-    { to: '/global', label: 'Global', Icon: PieChart, color: '#5C6EFF' },
+    { to: '/', label: 'Budget', Icon: PieChart, color: '#E5BA73', exact: true },
+    { to: '/global', label: 'Global', Icon: PieChart, color: '#A0D2EB' },
 ];
 
 const BottomNav = () => (
     <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
         background: 'white',
-        borderTop: '1px solid #EEF2FB',
+        borderTop: '1px solid #F4F7F6',
         boxShadow: '0 -4px 20px rgba(0,0,0,0.06)',
         paddingBottom: 'env(safe-area-inset-bottom,0)',
     }}>
