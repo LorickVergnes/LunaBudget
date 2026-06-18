@@ -290,12 +290,12 @@ const Envelopes = () => {
   
     // Mobile layout
     return (
-      <div className="card fade-up" style={{ padding: 16, animationDelay: `${i * 40}ms` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} onClick={() => navigate(`/envelopes/${e.id}`, { state: { date: selectedDate, name: e.name, icon: e.icon, color: e.color } })}>
+      <div className="card fade-up" style={{ padding: 16, animationDelay: `${i * 40}ms`, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }} onClick={() => navigate(`/envelopes/${e.id}`, { state: { date: selectedDate, name: e.name, icon: e.icon, color: e.color } })}>
           <IconBubble icon={e.icon} color={e.color || ACCENT} size={42} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{e.name}</div>
               <div style={{
                 fontSize: 11, fontWeight: 800,
                 color: over ? "#EF4444" : (e.color || ACCENT),
@@ -408,7 +408,7 @@ const Envelopes = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
               {envelopes.map((env, i) => <EnvelopeCard key={env.id} e={env} i={i} />)}
             </div>
             {envelopes.length === 0 && (
