@@ -241,7 +241,7 @@ const Savings = () => {
 
     if (isDesktop) {
       return (
-        <div className="card fade-up" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, animationDelay: `${i * 40}ms` }}>
+        <div className="card fade-up" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, animationDelay: `${i * 40}ms`, borderLeft: `4px solid ${s.color || '#F9A825'}` }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <IconBubble icon={s.icon} color={s.color || '#F9A825'} size={48} />
             <div style={{ flex: 1 }}>
@@ -311,7 +311,7 @@ const Savings = () => {
 
     // Mobile Layout
     return (
-      <div className="card fade-up" style={{ padding: 16, animationDelay: `${i * 40}ms`, minWidth: 0 }}>
+      <div className="card fade-up" style={{ padding: 16, animationDelay: `${i * 40}ms`, minWidth: 0, borderLeft: `4px solid ${s.color || '#F9A825'}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
           <IconBubble icon={s.icon} color={s.color || '#F9A825'} size={44} />
           <div style={{ flex: 1, minWidth: 0 }}>

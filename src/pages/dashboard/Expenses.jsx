@@ -201,7 +201,8 @@ const Expenses = () => {
         padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14,
         animationDelay: `${i * 40}ms`, opacity: isUpcoming ? 0.6 : 1,
         background: isHidden ? 'rgba(255,255,255,0.4)' : 'white',
-        border: isUpcoming ? '1px dashed #E8ECFF' : 'none'
+        border: isUpcoming ? '1px dashed #E8ECFF' : 'none',
+        borderLeft: `4px solid ${exp.color || ACCENT}`
       }}>
         <div style={{ width: 44, height: 44, borderRadius: '50%', background: `${exp.color || ACCENT}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <IC size={20} style={{ color: exp.color || ACCENT }} />

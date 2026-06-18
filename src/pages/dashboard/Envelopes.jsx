@@ -235,7 +235,7 @@ const Envelopes = () => {
   
     if (isDesktop) {
       return (
-        <div className="card fade-up" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, animationDelay: `${i * 40}ms` }}>
+        <div className="card fade-up" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, animationDelay: `${i * 40}ms`, borderLeft: `4px solid ${e.color || ACCENT}` }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div 
               style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
@@ -290,7 +290,7 @@ const Envelopes = () => {
   
     // Mobile layout
     return (
-      <div className="card fade-up" style={{ padding: 16, animationDelay: `${i * 40}ms`, minWidth: 0 }}>
+      <div className="card fade-up" style={{ padding: 16, animationDelay: `${i * 40}ms`, minWidth: 0, borderLeft: `4px solid ${e.color || ACCENT}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }} onClick={() => navigate(`/envelopes/${e.id}`, { state: { date: selectedDate, name: e.name, icon: e.icon, color: e.color } })}>
           <IconBubble icon={e.icon} color={e.color || ACCENT} size={42} />
           <div style={{ flex: 1, minWidth: 0 }}>
