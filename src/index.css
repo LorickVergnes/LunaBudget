@@ -218,6 +218,14 @@ svg.donut {
     gap: 4px;
     flex: 1;
     padding-left: 16px;
+    overflow-x: auto;
+    white-space: nowrap;
+    min-width: 0;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .desktop-header-nav::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
   }
 
   .desktop-nav-tab {
@@ -228,7 +236,7 @@ svg.donut {
     color: #8892a4;
     text-decoration: none;
     transition: all 0.2s;
-    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .desktop-nav-tab:hover {
@@ -340,30 +348,49 @@ svg.donut {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex: 1;
+    width: 100%;
   }
 
   .desktop-sidebar-item {
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    border-radius: 14px;
+    color: #4A6984;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .desktop-sidebar-item:hover {
+    background: rgba(160, 210, 235, 0.15);
+  }
+
+  .desktop-sidebar-item--active {
+    background: rgba(160, 210, 235, 0.2);
   }
 
   .desktop-sidebar-icon-wrap {
     width: 44px;
     height: 44px;
-    border-radius: 13px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     transition: all 0.2s;
   }
 
   .desktop-sidebar-icon-wrap:hover {
-    background: #F5F7FF !important;
+    background: transparent !important;
   }
 
   .desktop-sidebar-settings {
     margin-top: auto;
+    background: none;
+    border: none;
+    font-family: inherit;
   }
 
   /* ── Main content area ── */

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { LogOut, CreditCard, Mail, PiggyBank, Globe, LayoutDashboard } from 'lucide-react';
@@ -16,8 +16,27 @@ const TABS = [
 const DesktopHeader = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const navRef = useRef(null);
+  
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur';
   const initial = displayName.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const handleWheel = (e) => {
+      // Translate vertical scroll into horizontal scroll
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        nav.scrollLeft += e.deltaY;
+      }
+    };
+
+    // Use { passive: false } to allow e.preventDefault()
+    nav.addEventListener('wheel', handleWheel, { passive: false });
+    return () => nav.removeEventListener('wheel', handleWheel);
+  }, []);
 
   return (
     <header className="desktop-header">
@@ -30,7 +49,7 @@ const DesktopHeader = () => {
       </div>
 
       {/* Nav tabs */}
-      <nav className="desktop-header-nav">
+      <nav className="desktop-header-nav" ref={navRef}>
         {TABS.map(({ to, label, exact }) => (
           <NavLink
             key={to}

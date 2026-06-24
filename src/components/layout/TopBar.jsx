@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { LogOut, Menu, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import DashboardSelector from '../ui/DashboardSelector';
 
 const TopBar = ({ title }) => {
   const { user, signOut } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const navigate = useNavigate();
   
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur';
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div style={{ 
@@ -47,11 +60,87 @@ const TopBar = ({ title }) => {
         <DashboardSelector />
       </div>
 
-      {/* Bouton de déconnexion (Droite) */}
+      {/* Bouton Menu (Droite) */}
       <div style={{ width: '30%', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-        <button onClick={() => signOut()} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <LogOut size={20} style={{ color: '#ef4444' }} />
+        <button onClick={() => setMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <Menu size={24} style={{ color: '#4A6984' }} />
         </button>
+
+        {/* Bottom Sheet Menu */}
+        {menuOpen && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(3px)',
+            }}
+            onClick={() => setMenuOpen(false)}
+            className="fade-in"
+          >
+            <div 
+              style={{
+                width: '100%',
+                maxWidth: 480,
+                background: 'white',
+                borderTopLeftRadius: 32,
+                borderTopRightRadius: 32,
+                padding: '24px 20px 40px',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 16,
+                transform: 'translateY(0)',
+                animation: 'fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: 8 }}>
+                <div style={{ width: 40, height: 5, borderRadius: 10, background: '#E5E7EB' }} />
+              </div>
+
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: '#4A6984', textAlign: 'center', marginBottom: 8 }}>
+                Menu
+              </h2>
+
+              <button 
+                onClick={() => { setMenuOpen(false); navigate('/account'); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
+                  background: '#F8FAFC', border: 'none', borderRadius: 16,
+                  cursor: 'pointer', width: '100%', textAlign: 'left',
+                  color: '#4A6984', fontWeight: 700, fontSize: 16,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                }}
+              >
+                <div style={{ background: '#A0D2EB1A', padding: 10, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <User size={22} style={{ color: '#A0D2EB' }} />
+                </div>
+                Mon Profil
+              </button>
+              
+              <button 
+                onClick={() => { setMenuOpen(false); signOut(); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
+                  background: '#FEF2F2', border: 'none', borderRadius: 16,
+                  cursor: 'pointer', width: '100%', textAlign: 'left',
+                  color: '#ef4444', fontWeight: 700, fontSize: 16,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                }}
+              >
+                <div style={{ background: 'white', padding: 10, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(239,68,68,0.1)' }}>
+                  <LogOut size={22} style={{ color: '#ef4444' }} />
+                </div>
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       
     </div>
