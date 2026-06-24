@@ -39,7 +39,7 @@ const ProgressLinear = ({ value, max, color }) => {
 
 const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
   const r = 40, cx = 50, cy = 50;
-  const circ = 2 * Math.PI * r; 
+  const circ = 2 * Math.PI * r;
   const normalizedTotal = Math.max(total, 1);
 
   return (
@@ -56,11 +56,11 @@ const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
           const offset = -(previousValue / normalizedTotal * circ);
 
           return (
-            <circle 
+            <circle
               key={i} cx={cx} cy={cy} r={r} fill="none" strokeWidth={12}
               stroke={seg.color} strokeDasharray={`${dashLength} ${circ}`}
               strokeDashoffset={offset} strokeLinecap="butt"
-              style={{ 
+              style={{
                 transform: 'rotate(-90deg)', transformOrigin: '50px 50px',
                 transition: 'stroke-dasharray 0.8s ease, stroke-dashoffset 0.8s ease'
               }}
@@ -91,7 +91,7 @@ const Dashboard = () => {
   const [recentOps, setRecentOps] = useState([]);
   const [envelopesPreview, setEnvelopesPreview] = useState([]);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (user) {
       if (activeDashboard) {
         fetchData();
@@ -189,7 +189,7 @@ const Dashboard = () => {
   let tipMessage = null;
   if (isCurrentMonth) {
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = Math.max(lastDayOfMonth - now.getDate() + 1, 1); 
+    const daysLeft = Math.max(lastDayOfMonth - now.getDate() + 1, 1);
     if (showForecast) {
       const perDay = (forecastData.income - forecastData.fixedExp - forecastData.envExp - forecastData.savings) / 30;
       tipMessage = <>Prévisionnel : Fin de mois avec environ <strong>{balance.toLocaleString('fr-FR')} €</strong> ({perDay.toFixed(2)} €/j).</>;
@@ -219,37 +219,38 @@ const Dashboard = () => {
 
   const dashboardContent = () => (
     <div style={{ display: 'grid', gap: isDesktop ? 20 : 16, gridTemplateColumns: isDesktop ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)' }}>
-      
+
       {/* Hero Card */}
-      <div className="fade-up" style={{ 
+      <div className="fade-up" style={{
         gridColumn: isDesktop ? 'span 2' : 'span 1',
-        padding: isDesktop ? 24 : 20, 
-        background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', 
-        borderRadius: isDesktop ? 24 : 20, 
-        color: 'white', 
-        boxShadow: '0 10px 30px rgba(160,210,235,0.3)', 
-        position: 'relative', 
-        overflow: 'hidden' 
+        padding: isDesktop ? 24 : 20,
+        background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)',
+        borderRadius: isDesktop ? 24 : 20,
+        color: 'white',
+        textShadow: '0 2px 4px rgba(0,0,0,0.15)',
+        boxShadow: '0 10px 30px rgba(160,210,235,0.3)',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, opacity: .85 }}>Reste à vivre {showForecast ? '(Prévu)' : '(Réel)'}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, opacity: .9 }}>Reste à vivre {showForecast ? '(Prévu)' : '(Réel)'}</div>
             <div style={{ fontSize: isDesktop ? 44 : 36, fontWeight: 900, marginTop: 6, letterSpacing: -1 }}>{fmt(balance)}</div>
             <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,.18)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.15)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, textShadow: 'none' }}>
                 <ArrowUpRight size={11} /> {fmt(activeData.income)}
               </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,.18)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.15)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, textShadow: 'none' }}>
                 <ArrowDownRight size={11} /> {fmt(expenseTotal)}
               </span>
             </div>
           </div>
-          <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Sparkles size={22} />
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(0,0,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Sparkles size={22} color="white" />
           </div>
         </div>
 
-        <div style={{ height: 1, background: "rgba(255,255,255,.18)", margin: "16px 0" }} />
+        <div style={{ height: 1, background: "rgba(255,255,255,.25)", margin: "16px 0", boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: isDesktop ? 16 : 8 }}>
           {[
@@ -258,7 +259,7 @@ const Dashboard = () => {
             { label: "Épargne", value: fmt(activeData.savings), icon: PiggyBank },
           ].map((s) => (
             <div key={s.label}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: .8, fontSize: 10, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: .9, fontSize: 10, fontWeight: 600 }}>
                 <s.icon size={11} /> {s.label}
               </div>
               <div style={{ fontSize: isDesktop ? 16 : 14, fontWeight: 800, marginTop: 3, letterSpacing: -0.2 }}>{s.value}</div>
@@ -267,16 +268,16 @@ const Dashboard = () => {
         </div>
 
         {/* Conseil inside Hero */}
-        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 16, marginTop: 16 }}>
+        <div style={{ background: 'rgba(0,0,0,0.12)', borderRadius: 16, padding: 16, marginTop: 16, border: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ display: 'flex', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Info size={16} color="white" />
             </div>
             <div style={{ flex: 1, minWidth: 0, display: isDesktop ? 'flex' : 'block', alignItems: 'center', gap: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.9, marginBottom: isDesktop ? 0 : 2, whiteSpace: isDesktop ? 'nowrap' : 'normal' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.95, marginBottom: isDesktop ? 0 : 2, whiteSpace: isDesktop ? 'nowrap' : 'normal' }}>
                 Conseil du mois {isDesktop && ':'}
               </div>
-              <p style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.4, opacity: 0.95, margin: 0, wordBreak: 'break-word', whiteSpace: 'normal' }}>
+              <p style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.4, opacity: 0.95, margin: 0, wordBreak: 'break-word', whiteSpace: 'normal', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                 {tipMessage}
               </p>
             </div>
@@ -306,9 +307,9 @@ const Dashboard = () => {
       {/* Donut Budget Card */}
       <div className="card fade-up" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', animationDelay: isDesktop ? '40ms' : '80ms' }}>
         <div style={{ width: '100%', fontSize: 16, fontWeight: 800, color: '#4A6984', marginBottom: 20, display: 'flex', justifyContent: 'flex-start' }}>Budget du mois</div>
-        <BudgetDonut 
-          segments={donutSegments} 
-          total={activeData.income || 1} 
+        <BudgetDonut
+          segments={donutSegments}
+          total={activeData.income || 1}
           size={160}
           label={`${activeData.income > 0 ? Math.round((expenseTotal / activeData.income) * 100) : 0}%`}
           sublabel="utilisé"

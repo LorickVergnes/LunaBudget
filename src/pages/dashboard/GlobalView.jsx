@@ -177,13 +177,13 @@ const GlobalView = () => {
                         ) : (
                             <>
                                 {/* ── Hero: all-time balance ── */}
-                                <div className="desktop-global-hero">
+                                <div className="desktop-global-hero" style={{ background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
                                     <div>
-                                        <p className="desktop-global-hero-label">Solde Total (Tous les mois)</p>
-                                        <p className="desktop-global-hero-value">{fmt(allTimeBalance)}</p>
+                                        <p className="desktop-global-hero-label" style={{ color: 'white', opacity: 0.9, textShadow: 'none' }}>Solde Total (Tous les mois)</p>
+                                        <p className="desktop-global-hero-value" style={{ color: 'white' }}>{fmt(allTimeBalance)}</p>
                                     </div>
-                                    <div className="desktop-global-hero-icon">
-                                        <Globe size={24} color="#A0D2EB" />
+                                    <div className="desktop-global-hero-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                                        <Globe size={24} color="white" />
                                     </div>
                                 </div>
 
@@ -309,13 +309,13 @@ const GlobalView = () => {
                 ) : (
                     <>
                         {/* All-time Balance Card */}
-                        <div className="card fade-up" style={{ padding: '24px 20px', marginBottom: 14, background: 'linear-gradient(135deg, #4A6984 0%, #2a2a4a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div className="fade-up" style={{ padding: '24px 20px', marginBottom: 14, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.2)', boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }}>
                             <div>
-                                <p style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Solde Total (Tous les mois)</p>
-                                <p style={{ fontSize: 26, fontWeight: 900, color: 'white' }}>{allTimeBalance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
+                                <p style={{ fontSize: 11, opacity: 0.9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Solde Total (Tous les mois)</p>
+                                <p style={{ fontSize: 26, fontWeight: 900 }}>{allTimeBalance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
                             </div>
-                            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Globe size={20} color="#A0D2EB" />
+                            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Globe size={20} color="white" />
                             </div>
                         </div>
 

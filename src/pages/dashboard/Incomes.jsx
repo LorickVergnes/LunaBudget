@@ -286,34 +286,34 @@ const Incomes = () => {
 
             {loading && !showForm ? <LoadingSpinner /> : (
               <div className="desktop-main-grid">
-                <div className="desktop-budget-card" style={{ display: 'flex', flexDirection: 'column' }}>
-                  <p className="desktop-card-title">Résumé des revenus</p>
+                <div className="desktop-budget-card" style={{ display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
+                  <p className="desktop-card-title" style={{ color: 'white', textShadow: 'none' }}>Résumé des revenus</p>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 32, padding: '10px 0' }}>
-                    <DonutChart segments={donutSegments} total={total || 0} size={200} centerLabel={showForecast ? "Prévu" : "Réel"} />
+                    <DonutChart segments={donutSegments} total={total || 0} size={200} centerLabel={showForecast ? "Prévu" : "Réel"} textColor="white" subTextColor="white" textShadow="0 1px 3px rgba(0,0,0,0.3)" />
                     
                     <div style={{ width: '100%' }}>
-                       <div style={{ display: 'flex', justifyContent: 'center', gap: 40, marginBottom: 24, borderBottom: '1px solid #F5F7FF', paddingBottom: 16 }}>
+                       <div style={{ display: 'flex', justifyContent: 'center', gap: 40, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.25)', paddingBottom: 16 }}>
                           <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', marginBottom: 4 }}>Total {showForecast ? 'Prévu' : 'Réel'}</p>
-                            <p style={{ fontSize: 24, fontWeight: 900, color: '#4A6984' }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
+                            <p style={{ fontSize: 12, fontWeight: 700, opacity: 0.9, textTransform: 'uppercase', marginBottom: 4 }}>Total {showForecast ? 'Prévu' : 'Réel'}</p>
+                            <p style={{ fontSize: 24, fontWeight: 900 }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
                           </div>
                           {!showForecast && totalForecast > total && (
                             <div style={{ textAlign: 'center' }}>
-                              <p style={{ fontSize: 12, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', marginBottom: 4 }}>Objectif</p>
-                              <p style={{ fontSize: 24, fontWeight: 900, color: '#A0D2EB' }}>{totalForecast.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
+                              <p style={{ fontSize: 12, fontWeight: 700, opacity: 0.9, textTransform: 'uppercase', marginBottom: 4 }}>Objectif</p>
+                              <p style={{ fontSize: 24, fontWeight: 900 }}>{totalForecast.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</p>
                             </div>
                           )}
                        </div>
 
-                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', background: 'rgba(0,0,0,0.1)', padding: 16, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)' }}>
                         {filteredIncomes.map(inc => (
                           <div key={inc.id} style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                               <div style={{ width: 10, height: 10, borderRadius: '50%', background: inc.color || ACCENT, flexShrink: 0 }} />
-                              <span style={{ fontSize: 13, color: '#555', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.name}</span>
+                              <span style={{ fontSize: 13, color: 'white', fontWeight: 600, opacity: 0.95, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.name}</span>
                             </div>
-                            <span style={{ fontSize: 13, fontWeight: 800, color: '#4A6984', flexShrink: 0 }}>{parseFloat(inc.amount).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                            <span style={{ fontSize: 13, fontWeight: 800, color: 'white', flexShrink: 0 }}>{parseFloat(inc.amount).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
                           </div>
                         ))}
                       </div>
@@ -358,23 +358,23 @@ const Incomes = () => {
         </div>
         {loading && !showForm ? <LoadingSpinner /> : (
           <>
-            <div className="card fade-up" style={{ padding: '20px', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap' }}>
+            <div className="fade-up" style={{ padding: '20px', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap', background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 20, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.2)', boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#B0B8C9', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{showForecast ? 'Total Prévu' : 'Total Réel'}</span>
-                <span style={{ fontSize: 22, fontWeight: 900, color: '#4A6984' }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
-                {!showForecast && totalForecast > total && <span style={{ fontSize: 11, color: '#B0B8C9', marginTop: 4 }}>Sur {totalForecast.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} € prévus</span>}
+                <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.9, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{showForecast ? 'Total Prévu' : 'Total Réel'}</span>
+                <span style={{ fontSize: 24, fontWeight: 900 }}>{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
+                {!showForecast && totalForecast > total && <span style={{ fontSize: 11, opacity: 0.85, marginTop: 4 }}>Sur {totalForecast.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} € prévus</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <DonutChart segments={donutSegments} total={total || 1} size={120} />
+                <DonutChart segments={donutSegments} total={total || 1} size={120} textColor="white" subTextColor="white" textShadow="0 1px 3px rgba(0,0,0,0.3)" />
               </div>
-              <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px' }}>
+              <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: '140px', background: 'rgba(0,0,0,0.1)', padding: 12, borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)' }}>
                 {filteredIncomes.slice(0, 3).map(inc => (
                   <div key={inc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: inc.color || ACCENT, flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.name}</span>
+                      <span style={{ fontSize: 11, color: 'white', opacity: 0.95, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.name}</span>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#4A6984', flexShrink: 0 }}>{parseFloat(inc.amount).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'white', flexShrink: 0 }}>{parseFloat(inc.amount).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
                   </div>
                 ))}
               </div>

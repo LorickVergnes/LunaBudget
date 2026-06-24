@@ -276,10 +276,11 @@ const Savings = () => {
               onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}
               style={{
                 flex: 1, padding: '10px', borderRadius: 12,
-                background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', color: '#fff',
+                background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: '#fff',
                 fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 boxShadow: '0 6px 14px rgba(160,210,235,.3)',
+                textShadow: '0 1px 2px rgba(0,0,0,0.2)'
               }}
             >
               <Plus size={14} /> Alimenter
@@ -341,10 +342,11 @@ const Savings = () => {
             onClick={() => navigate(`/savings/${s.id}`, { state: { date: selectedDate, name: s.name, icon: s.icon, color: s.color } })}
             style={{
               flex: 1, padding: '9px', borderRadius: 11,
-              background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', color: '#fff',
+              background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: '#fff',
               fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               boxShadow: '0 6px 14px rgba(160,210,235,.28)',
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)'
             }}
           >
             <Plus size={14} /> Alimenter
@@ -398,14 +400,14 @@ const Savings = () => {
 
             {loading && !showForm ? <LoadingSpinner color="#F9A825" /> : (
               <div>
-                <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', color: 'white', border: 'none' }}>
+                <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontSize: 12, opacity: .85, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                      <div style={{ fontSize: 12, opacity: .9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
                         Patrimoine épargné
                       </div>
                       <div style={{ fontSize: 36, fontWeight: 900, marginTop: 4 }}>{fmt(totalSaved)}</div>
-                      <div style={{ fontSize: 14, opacity: .85, fontWeight: 600, marginTop: 4 }}>
+                      <div style={{ fontSize: 14, opacity: .9, fontWeight: 600, marginTop: 4 }}>
                         Objectif total : {fmt(totalTarget)}
                       </div>
                     </div>
@@ -442,12 +444,12 @@ const Savings = () => {
 
         {loading && !showForm ? <LoadingSpinner color="#F9A825" /> : (
           <>
-            <div className="fade-up" style={{ padding: 20, background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', borderRadius: 18, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }}>
-              <div style={{ fontSize: 11, opacity: .85, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5 }}>
+            <div className="fade-up" style={{ padding: 20, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 18, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
+              <div style={{ fontSize: 11, opacity: .9, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5 }}>
                 Patrimoine épargné
               </div>
               <div style={{ fontSize: 28, fontWeight: 900, marginTop: 4 }}>{fmt(totalSaved)}</div>
-              <div style={{ fontSize: 12, opacity: .85, fontWeight: 600, marginTop: 4 }}>
+              <div style={{ fontSize: 12, opacity: .9, fontWeight: 600, marginTop: 4 }}>
                 Objectif total : {fmt(totalTarget)}
               </div>
             </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { groupSegments } from '../../lib/colorUtils';
 
-const DonutChart = ({ segments, total, size = 140, centerLabel = "Total", limit = 10, className = "" }) => {
+const DonutChart = ({ segments, total, size = 140, centerLabel = "Total", limit = 10, className = "", textColor = "#4A6984", subTextColor = "#B0B8C9", textShadow = "none" }) => {
   const r = 52, cx = 70, cy = 70;
   const circ = 2 * Math.PI * r;
 
@@ -51,11 +51,11 @@ const DonutChart = ({ segments, total, size = 140, centerLabel = "Total", limit 
           );
         })}
       </svg>
-      <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
-        <span style={{ fontSize: Math.max(12, 16 * scale), fontWeight: 900, color: '#4A6984', display: 'block' }}>
+      <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center', textShadow }}>
+        <span style={{ fontSize: Math.max(12, 16 * scale), fontWeight: 900, color: textColor, display: 'block' }}>
           {processedTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
         </span>
-        <span style={{ fontSize: Math.max(8, 10 * scale), fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 1 * scale }}>
+        <span style={{ fontSize: Math.max(8, 10 * scale), fontWeight: 700, color: subTextColor, textTransform: 'uppercase', letterSpacing: 1 * scale, opacity: 0.9 }}>
           {centerLabel}
         </span>
       </div>

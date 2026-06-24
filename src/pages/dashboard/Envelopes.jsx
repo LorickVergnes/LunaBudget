@@ -45,7 +45,7 @@ const IconBubble = ({ icon, color, size = 42 }) => {
   );
 };
 
-const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#F4F7F6', label, sublabel }) => {
+const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#F4F7F6', label, sublabel, textColor = '#4A6984', subTextColor = '#B0B8C9', textShadow = 'none' }) => {
   const pct = Math.min(value / Math.max(max, 1), 1);
   const r = (size - stroke) / 2;
   const cx = size / 2, cy = size / 2;
@@ -59,9 +59,9 @@ const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, track
         <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={stroke} stroke={color} strokeDasharray={`${dashLength} ${circ}`} strokeLinecap="round" style={{ transition: 'stroke-dasharray 0.7s ease' }} />
       </svg>
       {(label || sublabel) && (
-        <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
-          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: '#4A6984', display: 'block' }}>{label}</span>}
-          {sublabel && <span style={{ fontSize: size * 0.09, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>{sublabel}</span>}
+        <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center', textShadow }}>
+          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: textColor, display: 'block' }}>{label}</span>}
+          {sublabel && <span style={{ fontSize: size * 0.09, fontWeight: 700, color: subTextColor, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2, opacity: 0.9 }}>{sublabel}</span>}
         </div>
       )}
     </div>
@@ -350,17 +350,17 @@ const Envelopes = () => {
 
             {loading && !showForm ? <LoadingSpinner color={ACCENT} /> : (
               <div>
-                <div className="desktop-budget-card" style={{ marginBottom: 24 }}>
+                <div className="desktop-budget-card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-                    <SingleDonut value={totalSpent} max={totalBudget} size={140} stroke={14} color={ACCENT} label={`${pctTotal}%`} sublabel="global" />
+                    <SingleDonut value={totalSpent} max={totalBudget} size={140} stroke={14} color="#fff" trackColor="rgba(255,255,255,.25)" label={`${pctTotal}%`} sublabel="global" textColor="white" subTextColor="white" textShadow="0 1px 3px rgba(0,0,0,0.3)" />
                     <div style={{ flex: 1, minWidth: 200 }}>
-                      <div style={{ fontSize: 13, color: '#B0B8C9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Toutes enveloppes confondues</div>
-                      <div style={{ fontSize: 32, fontWeight: 900, color: '#4A6984', marginTop: 4 }}>
-                        {fmt(totalSpent)} <span style={{ fontSize: 18, color: '#8892a4', fontWeight: 700 }}>/ {fmt(totalBudget)}</span>
+                      <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9, textTransform: 'uppercase', letterSpacing: 0.5 }}>Toutes enveloppes confondues</div>
+                      <div style={{ fontSize: 32, fontWeight: 900, marginTop: 4 }}>
+                        {fmt(totalSpent)} <span style={{ fontSize: 18, fontWeight: 700, opacity: 0.85 }}>/ {fmt(totalBudget)}</span>
                       </div>
                       <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                        <span style={{ background: 'transparent', color: '#A0D2EB', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{envelopes.length} enveloppes</span>
-                        <span style={{ background: '#ECFDF5', color: '#059669', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{fmt(totalBudget - totalSpent)} disponible</span>
+                        <span style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{envelopes.length} enveloppes</span>
+                        <span style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '6px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{fmt(totalBudget - totalSpent)} disponible</span>
                       </div>
                     </div>
                   </div>
@@ -395,15 +395,15 @@ const Envelopes = () => {
 
         {loading && !showForm ? <LoadingSpinner color={ACCENT} /> : (
           <>
-            <div style={{ background: 'linear-gradient(135deg, #A0D2EB 0%, #E5BA73 100%)', borderRadius: 18, padding: 20, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }} className="fade-up">
+            <div style={{ background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 18, padding: 20, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)', textShadow: '0 1px 3px rgba(0,0,0,0.2)' }} className="fade-up">
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <SingleDonut value={totalSpent} max={totalBudget} size={90} stroke={10} color="#fff" trackColor="rgba(255,255,255,.25)" />
+                <SingleDonut value={totalSpent} max={totalBudget} size={90} stroke={10} color="#fff" trackColor="rgba(255,255,255,.25)" textColor="white" subTextColor="white" textShadow="0 1px 3px rgba(0,0,0,0.3)" />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, opacity: .85, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  <div style={{ fontSize: 11, opacity: .9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Budget enveloppes
                   </div>
                   <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4, letterSpacing: -0.3 }}>{fmt(totalSpent)}</div>
-                  <div style={{ fontSize: 12, opacity: .85, fontWeight: 600, marginTop: 2 }}>sur {fmt(totalBudget)} · {pctTotal}%</div>
+                  <div style={{ fontSize: 12, opacity: .85, fontWeight: 700, marginTop: 2 }}>sur {fmt(totalBudget)} · {pctTotal}%</div>
                 </div>
               </div>
             </div>
