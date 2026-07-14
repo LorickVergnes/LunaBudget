@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -28,6 +30,7 @@ const Expenses = () => {
   const { activeDashboard, loading: dashLoading } = useDashboard();
   const { selectedDate, setSelectedDate } = useMonth();
   const isDesktop = useDesktop();
+  const { showToast } = useToast();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -39,17 +42,8 @@ const Expenses = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Home', color: '#E5BA73' });
 
-  useEffect(() => { 
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, activeDashboard, selectedDate, dashLoading]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!activeDashboard) return;
     setLoading(true);
     try {
       await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
@@ -60,7 +54,34 @@ const Expenses = () => {
         .order('date', { ascending: false });
       if (!error) setExpenses(data || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  };
+  }, [activeDashboard?.id, selectedDate]);
+
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, activeDashboard, selectedDate, dashLoading, fetchData]);
+
+  useRealtimeTable('expenses', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
+    const record = newRecord || oldRecord;
+    const currentMonth = formatMonthDate(selectedDate);
+    if (record?.month_date && record.month_date !== currentMonth) return;
+
+    if (newRecord?.user_id === user?.id) {
+      fetchData();
+      return;
+    }
+
+    fetchData();
+
+    const labels = { INSERT: 'ajoutée', UPDATE: 'modifiée', DELETE: 'supprimée' };
+    const name = newRecord?.name || oldRecord?.name || 'Une dépense fixe';
+    showToast(`${name} a été ${labels[eventType] || 'modifiée'} par un collaborateur`, { type: 'info', duration: 4000 });
+  }, [selectedDate, user?.id, fetchData, showToast]));
 
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Loader2, Trash2, Pencil, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -72,6 +74,7 @@ const Savings = () => {
   const { selectedDate, setSelectedDate } = useMonth();
   const { activeDashboard, loading: dashLoading } = useDashboard();
   const isDesktop = useDesktop();
+  const { showToast } = useToast();
   const [savings, setSavings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -82,17 +85,7 @@ const Savings = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' });
 
-  useEffect(() => { 
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, selectedDate, activeDashboard, dashLoading]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!activeDashboard) return;
     setLoading(true);
     try {
@@ -121,7 +114,51 @@ const Savings = () => {
         };
       }));
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  };
+  }, [activeDashboard?.id, selectedDate]);
+
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, selectedDate, activeDashboard, dashLoading, fetchData]);
+
+  useRealtimeTable('savings', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
+    const record = newRecord || oldRecord;
+    const currentMonth = formatMonthDate(selectedDate);
+    if (record?.month_date && record.month_date !== currentMonth) return;
+
+    if (newRecord?.user_id === user?.id) {
+      fetchData();
+      return;
+    }
+
+    fetchData();
+
+    const labels = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
+    const name = newRecord?.name || oldRecord?.name || "Un objectif d'épargne";
+    showToast(`${name} a été ${labels[eventType] || 'modifié'} par un collaborateur`, { type: 'info', duration: 4000 });
+  }, [selectedDate, user?.id, fetchData, showToast]));
+
+  // On écoute aussi les versements pour mettre à jour la jauge de l'épargne parente
+  useRealtimeTable('saving_entries', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
+    const record = newRecord || oldRecord;
+    const currentMonth = formatMonthDate(selectedDate);
+    if (record?.month_date && record.month_date !== currentMonth) return;
+
+    if (newRecord?.user_id === user?.id) {
+      fetchData();
+      return;
+    }
+
+    fetchData();
+
+    const labels = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
+    showToast(`Un versement a été ${labels[eventType] || 'modifié'} sur un objectif`, { type: 'info', duration: 4000 });
+  }, [selectedDate, user?.id, fetchData, showToast]));
 
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);

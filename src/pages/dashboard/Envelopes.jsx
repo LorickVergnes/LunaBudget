@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Loader2, Trash2, ChevronRight, RotateCw, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -74,6 +76,7 @@ const Envelopes = () => {
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useMonth();
   const isDesktop = useDesktop();
+  const { showToast } = useToast();
   const [envelopes, setEnvelopes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -84,17 +87,7 @@ const Envelopes = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false });
 
-  useEffect(() => { 
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, activeDashboard, selectedDate, dashLoading]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!activeDashboard) return;
     setLoading(true);
     try {
@@ -123,7 +116,53 @@ const Envelopes = () => {
         };
       }));
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  };
+  }, [activeDashboard?.id, selectedDate]);
+
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, activeDashboard, selectedDate, dashLoading, fetchData]);
+
+  useRealtimeTable('envelopes', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
+    const record = newRecord || oldRecord;
+    const currentMonth = formatMonthDate(selectedDate);
+    if (record?.month_date && record.month_date !== currentMonth) return;
+
+    if (newRecord?.user_id === user?.id) {
+      fetchData();
+      return;
+    }
+
+    fetchData();
+
+    const labels = { INSERT: 'ajoutée', UPDATE: 'modifiée', DELETE: 'supprimée' };
+    const name = newRecord?.name || oldRecord?.name || 'Une enveloppe';
+    showToast(`${name} a été ${labels[eventType] || 'modifiée'} par un collaborateur`, { type: 'info', duration: 4000 });
+  }, [selectedDate, user?.id, fetchData, showToast]));
+
+  // On écoute aussi les dépenses pour mettre à jour la jauge de l'enveloppe parente
+  useRealtimeTable('envelope_expenses', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
+    const record = newRecord || oldRecord;
+    const currentMonth = formatMonthDate(selectedDate);
+    if (record?.month_date && record.month_date !== currentMonth) return;
+
+    if (newRecord?.user_id === user?.id) {
+      fetchData();
+      return;
+    }
+
+    fetchData();
+
+    // Optionnel : on peut afficher un toast pour dire qu'une dépense a été ajoutée
+    const labels = { INSERT: 'ajoutée', UPDATE: 'modifiée', DELETE: 'supprimée' };
+    const name = newRecord?.name || oldRecord?.name || 'Une dépense';
+    showToast(`${name} a été ${labels[eventType] || 'modifiée'} dans une enveloppe`, { type: 'info', duration: 4000 });
+  }, [selectedDate, user?.id, fetchData, showToast]));
 
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);

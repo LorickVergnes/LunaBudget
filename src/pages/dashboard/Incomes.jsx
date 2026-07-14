@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -29,6 +31,7 @@ const Incomes = () => {
   const { activeDashboard, loading: dashLoading } = useDashboard();
   const { selectedDate, setSelectedDate } = useMonth();
   const isDesktop = useDesktop();
+  const { showToast } = useToast();
   const [incomes, setIncomes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -44,17 +47,9 @@ const Incomes = () => {
 
   const usedColors = incomes.filter(inc => inc.id !== editingId).map(inc => inc.color);
 
-  useEffect(() => { 
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, activeDashboard, selectedDate, dashLoading]);
-
-  const fetchData = async () => {
+  // Fetch data — stable grâce à useCallback
+  const fetchData = useCallback(async () => {
+    if (!activeDashboard) return;
     setLoading(true);
     try {
       await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
@@ -65,7 +60,40 @@ const Incomes = () => {
         .order('date', { ascending: false });
       if (!error) setIncomes(data || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  };
+  }, [activeDashboard?.id, selectedDate]);
+
+  useEffect(() => { 
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, activeDashboard, selectedDate, dashLoading, fetchData]);
+
+  // ── Realtime : synchronisation entre utilisateurs ──
+  useRealtimeTable('incomes', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
+    // Vérifier que l'événement concerne le mois sélectionné
+    const record = newRecord || oldRecord;
+    const currentMonth = formatMonthDate(selectedDate);
+    if (record?.month_date && record.month_date !== currentMonth) return;
+
+    // Ne pas notifier pour ses propres actions (sinon double feedback)
+    if (newRecord?.user_id === user?.id) {
+      // On refetch quand même pour être sûr de la cohérence
+      fetchData();
+      return;
+    }
+
+    // Refetch les données
+    fetchData();
+
+    // Notifier l'utilisateur du changement
+    const labels = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
+    const name = newRecord?.name || oldRecord?.name || 'Un revenu';
+    showToast(`${name} a été ${labels[eventType] || 'modifié'} par un collaborateur`, { type: 'info', duration: 4000 });
+  }, [selectedDate, user?.id, fetchData, showToast]));
 
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
