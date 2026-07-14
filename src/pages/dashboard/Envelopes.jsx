@@ -176,10 +176,10 @@ const Envelopes = () => {
     };
     if (editingId) {
       const { error } = await supabase.from('envelopes').update(data).eq('id', editingId);
-      if (!error) { resetForm(); fetchData(); } else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Enveloppe modifiée avec succès', { type: 'success' }); resetForm(); fetchData(); } else { setLoading(false); showToast(error.message, { type: 'error' }); }
     } else {
       const { error } = await supabase.from('envelopes').insert([data]);
-      if (!error) { resetForm(); fetchData(); } else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Enveloppe créée avec succès', { type: 'success' }); resetForm(); fetchData(); } else { setLoading(false); showToast(error.message, { type: 'error' }); }
     }
   };
 
@@ -207,7 +207,7 @@ const Envelopes = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('envelopes').delete().eq('id', deletingId);
-      if (error) alert(error.message); else fetchData();
+      if (error) showToast(error.message, { type: 'error' }); else { showToast('Enveloppe supprimée', { type: 'success' }); fetchData(); }
     } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
   };
 
@@ -215,7 +215,7 @@ const Envelopes = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('envelopes').update({ is_hidden: true }).eq('id', deletingId);
-      if (error) alert(error.message); else fetchData();
+      if (error) showToast(error.message, { type: 'error' }); else { showToast('Enveloppe masquée pour ce mois', { type: 'success' }); fetchData(); }
     } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
   };
 

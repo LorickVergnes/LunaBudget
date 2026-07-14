@@ -173,10 +173,10 @@ const Savings = () => {
     if (data.is_recurrent && data.max_month) { data.max_month = `${data.max_month}-01`; } else { data.max_month = null; }
     if (editingId) {
       const { error } = await supabase.from('savings').update(data).eq('id', editingId);
-      if (!error) { resetForm(); fetchData(); } else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Objectif modifié avec succès', { type: 'success' }); resetForm(); fetchData(); } else { setLoading(false); showToast(error.message, { type: 'error' }); }
     } else {
       const { error } = await supabase.from('savings').insert([data]);
-      if (!error) { resetForm(); fetchData(); } else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Objectif créé avec succès', { type: 'success' }); resetForm(); fetchData(); } else { setLoading(false); showToast(error.message, { type: 'error' }); }
     }
   };
 
@@ -205,7 +205,7 @@ const Savings = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('savings').delete().eq('id', deletingId);
-      if (error) alert(error.message); else fetchData();
+      if (error) showToast(error.message, { type: 'error' }); else { showToast('Objectif supprimé', { type: 'success' }); fetchData(); }
     } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
   };
 
@@ -213,7 +213,7 @@ const Savings = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('savings').update({ is_hidden: true }).eq('id', deletingId);
-      if (error) alert(error.message); else fetchData();
+      if (error) showToast(error.message, { type: 'error' }); else { showToast('Objectif masqué pour ce mois', { type: 'success' }); fetchData(); }
     } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
   };
 

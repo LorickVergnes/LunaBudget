@@ -98,12 +98,12 @@ const SavingDetail = () => {
     };
     if (editingId) {
       const { error } = await supabase.from('saving_entries').update(data).eq('id', editingId);
-      if (!error) { setFormData({ amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); setEditingId(null); fetchData(); }
-      else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Versement modifié avec succès', { type: 'success' }); setFormData({ amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); setEditingId(null); fetchData(); }
+      else { setLoading(false); showToast(error.message, { type: 'error' }); }
     } else {
       const { error } = await supabase.from('saving_entries').insert([data]);
-      if (!error) { setFormData({ amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); fetchData(); }
-      else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Versement ajouté avec succès', { type: 'success' }); setFormData({ amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); fetchData(); }
+      else { setLoading(false); showToast(error.message, { type: 'error' }); }
     }
   };
 
@@ -122,8 +122,8 @@ const SavingDetail = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('saving_entries').delete().eq('id', deletingId);
-      if (error) alert(error.message);
-      else fetchData();
+      if (error) showToast(error.message, { type: 'error' });
+      else { showToast('Versement supprimé', { type: 'success' }); fetchData(); }
     } catch (e) {
       console.error(e);
     } finally {

@@ -110,12 +110,12 @@ const Expenses = () => {
     };
     if (editingId) {
       const { error } = await supabase.from('expenses').update(data).eq('id', editingId);
-      if (error) { alert(error.message); setLoading(false); }
-      else { resetForm(); fetchData(); }
+      if (error) { showToast(error.message, { type: 'error' }); setLoading(false); }
+      else { showToast('Dépense modifiée avec succès', { type: 'success' }); resetForm(); fetchData(); }
     } else {
       const { error } = await supabase.from('expenses').insert([data]);
-      if (error) { alert(error.message); setLoading(false); }
-      else { resetForm(); fetchData(); }
+      if (error) { showToast(error.message, { type: 'error' }); setLoading(false); }
+      else { showToast('Dépense ajoutée avec succès', { type: 'success' }); resetForm(); fetchData(); }
     }
   };
 
@@ -141,8 +141,8 @@ const Expenses = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('expenses').delete().eq('id', deletingId);
-      if (error) alert(error.message);
-      else fetchData();
+      if (error) showToast(error.message, { type: 'error' });
+      else { showToast('Dépense supprimée', { type: 'success' }); fetchData(); }
     } finally {
       setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null);
     }
@@ -152,8 +152,8 @@ const Expenses = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('expenses').update({ is_hidden: true }).eq('id', deletingId);
-      if (error) alert(error.message);
-      else fetchData();
+      if (error) showToast(error.message, { type: 'error' });
+      else { showToast('Dépense masquée pour ce mois', { type: 'success' }); fetchData(); }
     } finally {
       setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null);
     }

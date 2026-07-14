@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../contexts/ToastContext';
 import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
 import DesktopHeader from '../../components/layout/DesktopHeader';
@@ -10,15 +11,14 @@ import { Loader2, CheckCircle2 } from 'lucide-react';
 
 const Account = () => {
   const { user, profile, refreshProfile } = useAuth();
+  const { showToast } = useToast();
   const [fullName, setFullName] = useState(profile?.full_name || user?.user_metadata?.full_name || '');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
   const isDesktop = useDesktop();
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage({ text: '', type: '' });
 
     // 1. Mettre à jour les métadonnées Auth
     const { error: authError } = await supabase.auth.updateUser({
@@ -26,7 +26,7 @@ const Account = () => {
     });
 
     if (authError) {
-      setMessage({ text: authError.message, type: 'error' });
+      showToast(authError.message, { type: 'error' });
       setLoading(false);
       return;
     }
@@ -38,9 +38,9 @@ const Account = () => {
       .eq('id', user.id);
 
     if (profileError) {
-      setMessage({ text: profileError.message, type: 'error' });
+      showToast(profileError.message, { type: 'error' });
     } else {
-      setMessage({ text: 'Profil mis à jour avec succès.', type: 'success' });
+      showToast('Profil mis à jour avec succès', { type: 'success' });
       await refreshProfile(); // Rafraîchir le contexte global
     }
     setLoading(false);
@@ -49,23 +49,6 @@ const Account = () => {
   const formContent = (
     <>
       <h2 style={{ fontSize: 18, fontWeight: 800, color: '#4A6984', marginBottom: 20 }}>Informations du compte</h2>
-      
-      {message.text && (
-        <div style={{ 
-          padding: '12px', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          backgroundColor: message.type === 'error' ? '#fee2e2' : '#dcfce7',
-          color: message.type === 'error' ? '#991b1b' : '#166534',
-          fontSize: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          {message.type === 'success' && <CheckCircle2 size={16} />}
-          {message.text}
-        </div>
-      )}
 
       <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>

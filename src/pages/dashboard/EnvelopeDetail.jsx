@@ -101,12 +101,12 @@ const EnvelopeDetail = () => {
     };
     if (editingId) {
       const { error } = await supabase.from('envelope_expenses').update(data).eq('id', editingId);
-      if (!error) { setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); setEditingId(null); fetchData(); }
-      else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Dépense modifiée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); setEditingId(null); fetchData(); }
+      else { setLoading(false); showToast(error.message, { type: 'error' }); }
     } else {
       const { error } = await supabase.from('envelope_expenses').insert([data]);
-      if (!error) { setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); fetchData(); }
-      else { setLoading(false); alert(error.message); }
+      if (!error) { showToast('Dépense ajoutée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); fetchData(); }
+      else { setLoading(false); showToast(error.message, { type: 'error' }); }
     }
   };
 
@@ -125,8 +125,8 @@ const EnvelopeDetail = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('envelope_expenses').delete().eq('id', deletingId);
-      if (error) alert(error.message);
-      else fetchData();
+      if (error) showToast(error.message, { type: 'error' });
+      else { showToast('Dépense supprimée', { type: 'success' }); fetchData(); }
     } catch (e) {
       console.error(e);
     } finally {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 const ToastContext = createContext();
 
@@ -100,12 +101,13 @@ const TYPE_CONFIG = {
 const ToastContainer = ({ toasts, onDismiss }) => {
   if (toasts.length === 0) return null;
 
-  return (
+  return createPortal(
     <div className="toast-container" aria-live="polite" aria-atomic="false">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
-    </div>
+    </div>,
+    document.body
   );
 };
 
