@@ -104,16 +104,44 @@ export const DashboardProvider = ({ children }) => {
     await fetchDashboards();
   }, [fetchDashboards]);
 
+  const updateDashboard = useCallback(async (dashboardId, updates) => {
+    const { error } = await supabase
+      .from('dashboards')
+      .update(updates)
+      .eq('id', dashboardId);
+    
+    if (error) throw error;
+    await fetchDashboards();
+  }, [fetchDashboards]);
+
+  const deleteDashboard = useCallback(async (dashboardId) => {
+    const { error } = await supabase
+      .from('dashboards')
+      .delete()
+      .eq('id', dashboardId);
+    
+    if (error) throw error;
+    
+    if (activeDashboard?.id === dashboardId) {
+      setActiveDashboard(null);
+      localStorage.removeItem(`activeDashboard_${user?.id}`);
+    }
+    
+    await fetchDashboards();
+  }, [activeDashboard, user?.id, fetchDashboards]);
+
   const value = useMemo(() => ({
     dashboards,
     activeDashboard,
     loading,
     switchDashboard,
     createDashboard,
+    updateDashboard,
+    deleteDashboard,
     addMemberByEmail,
     removeMember,
     refreshDashboards: fetchDashboards
-  }), [dashboards, activeDashboard, loading, switchDashboard, createDashboard, addMemberByEmail, removeMember, fetchDashboards]);
+  }), [dashboards, activeDashboard, loading, switchDashboard, createDashboard, updateDashboard, deleteDashboard, addMemberByEmail, removeMember, fetchDashboards]);
 
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
 };

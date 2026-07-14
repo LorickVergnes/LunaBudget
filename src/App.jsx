@@ -15,6 +15,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 import { MonthProvider } from './contexts/MonthContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { DashboardProvider } from './contexts/DashboardContext';
+import { ToastProvider } from './contexts/ToastContext';
 import AmbientOrbs from './components/ui/AmbientOrbs';
 
 const ProtectedRoute = ({ children }) => {
@@ -33,31 +34,33 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <AuthProvider>
-      <DashboardProvider>
-        <MonthProvider>
-          <AmbientOrbs />
-          <Router>
-            <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+    <ToastProvider>
+      <AuthProvider>
+        <DashboardProvider>
+          <MonthProvider>
+            <AmbientOrbs />
+            <Router>
+              <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/incomes" element={<ProtectedRoute><Incomes /></ProtectedRoute>} />
-            <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-            <Route path="/envelopes" element={<ProtectedRoute><Envelopes /></ProtectedRoute>} />
-            <Route path="/envelopes/:id" element={<ProtectedRoute><EnvelopeDetail /></ProtectedRoute>} />
-            <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
-            <Route path="/savings/:id" element={<ProtectedRoute><SavingDetail /></ProtectedRoute>} />
-            <Route path="/global" element={<ProtectedRoute><GlobalView /></ProtectedRoute>} />
-            <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/incomes" element={<ProtectedRoute><Incomes /></ProtectedRoute>} />
+              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+              <Route path="/envelopes" element={<ProtectedRoute><Envelopes /></ProtectedRoute>} />
+              <Route path="/envelopes/:id" element={<ProtectedRoute><EnvelopeDetail /></ProtectedRoute>} />
+              <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
+              <Route path="/savings/:id" element={<ProtectedRoute><SavingDetail /></ProtectedRoute>} />
+              <Route path="/global" element={<ProtectedRoute><GlobalView /></ProtectedRoute>} />
+              <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
 
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </Router>
-      </MonthProvider>
-    </DashboardProvider>
-  </AuthProvider>
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Router>
+        </MonthProvider>
+      </DashboardProvider>
+    </AuthProvider>
+  </ToastProvider>
   );
 }
 

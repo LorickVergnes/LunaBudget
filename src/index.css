@@ -48,6 +48,15 @@ body {
 /* Top bar safe area padding */
 :root {
   --safe-top: env(safe-area-inset-top, 20px);
+  --bg-white: white;
+  --bg-app: #F4F7F6;
+  --text-primary: #4A6984;
+}
+
+[data-theme='dark'] {
+  --bg-white: #1e1e1e;
+  --bg-app: #121212;
+  --text-primary: #f8fafc;
 }
 
 
@@ -901,3 +910,167 @@ svg.donut {
   }
 }
 /* End desktop styles */
+
+/* ════════════════════════════════════════
+   TOAST / FLASH MESSAGES
+   Mobile-first: top-center
+   Desktop (≥900px): bottom-right
+   ════════════════════════════════════════ */
+
+/* Container — mobile: top-center */
+.toast-container {
+  position: fixed;
+  top: calc(var(--safe-top, 20px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  width: calc(100% - 32px);
+  max-width: 420px;
+}
+
+/* Container — desktop: bottom-right */
+@media (min-width: 900px) {
+  .toast-container {
+    top: auto;
+    bottom: 28px;
+    left: auto;
+    right: 28px;
+    transform: none;
+    width: 380px;
+  }
+}
+
+/* Individual toast item */
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: all;
+  will-change: transform, opacity;
+}
+
+/* Toast icon circle */
+.toast-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Toast message */
+.toast-message {
+  flex: 1;
+  margin: 0;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+/* Toast close button */
+.toast-close {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+/* ── Animations ── */
+
+/* Mobile entrance: slide down from top */
+@keyframes toastSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile exit: slide up */
+@keyframes toastSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+}
+
+/* Desktop entrance: slide in from right */
+@keyframes toastSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Desktop exit: slide out to right */
+@keyframes toastSlideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
+}
+
+/* Mobile (default) */
+.toast-enter {
+  animation: toastSlideDown 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+.toast-exit {
+  animation: toastSlideUp 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Desktop overrides */
+@media (min-width: 900px) {
+  .toast-enter {
+    animation: toastSlideInRight 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+  }
+  .toast-exit {
+    animation: toastSlideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+}

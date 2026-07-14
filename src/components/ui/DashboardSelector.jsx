@@ -1,57 +1,20 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { ChevronDown, Plus, Users, Layout, X, UserPlus, Trash2 } from 'lucide-react';
-import BottomModal from './BottomModal';
+import { ChevronDown, Plus, Users, Layout, Settings } from 'lucide-react';
+import DashboardSettingsModal from './DashboardSettingsModal';
+import CreateDashboardModal from './CreateDashboardModal';
 
 const DashboardSelector = ({ isDesktop = false }) => {
   const { user } = useAuthContext();
-  const { dashboards, activeDashboard, switchDashboard, createDashboard, addMemberByEmail, removeMember } = useDashboard();
+  const { dashboards, activeDashboard, switchDashboard } = useDashboard();
   const [isOpen, setIsOpen] = useState(false);
-  const [showManageModal, setShowManageModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [isInviting, setIsInvite] = useState(false);
-
-  const handleCreate = async () => {
-    const name = prompt('Nom du nouveau tableau de bord :');
-    if (name) {
-      try {
-        await createDashboard(name);
-        setIsOpen(false);
-      } catch (error) {
-        alert('Erreur lors de la création : ' + error.message);
-      }
-    }
-  };
-
-  const handleInvite = async (e) => {
-    e.preventDefault();
-    if (!inviteEmail) return;
-    setIsInvite(true);
-    try {
-      await addMemberByEmail(activeDashboard.id, inviteEmail);
-      setInviteEmail('');
-      alert('Utilisateur ajouté avec succès !');
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setIsInvite(false);
-    }
-  };
-
-  const handleRemoveMember = async (userId) => {
-    if (window.confirm('Retirer ce membre du tableau de bord ?')) {
-      try {
-        await removeMember(activeDashboard.id, userId);
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-  };
+  
+  // Modals state
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   if (!activeDashboard) return null;
-
-  const isOwner = activeDashboard.owner_id === user?.id;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -61,7 +24,7 @@ const DashboardSelector = ({ isDesktop = false }) => {
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          background: isDesktop ? '#F3F4F6' : 'transparent',
+          background: isDesktop ? 'var(--bg-white)' : 'transparent',
           border: 'none',
           padding: isDesktop ? '8px 12px' : '4px',
           borderRadius: 10,
@@ -73,7 +36,7 @@ const DashboardSelector = ({ isDesktop = false }) => {
         <span style={{ 
           fontSize: 14, 
           fontWeight: 700, 
-          color: '#4A6984',
+          color: 'var(--text-primary)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap'
@@ -90,134 +53,92 @@ const DashboardSelector = ({ isDesktop = false }) => {
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
           />
           <div style={{
-            position: 'absolute',
-            top: '110%',
-            left: isDesktop ? 0 : 'auto',
-            right: isDesktop ? 'auto' : 0,
-            background: 'white',
-            borderRadius: 12,
-            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+            position: isDesktop ? 'absolute' : 'fixed',
+            top: isDesktop ? '110%' : '84px',
+            left: isDesktop ? 0 : '16px',
+            right: isDesktop ? 'auto' : '16px',
+            background: 'var(--bg-white)',
+            borderRadius: 16,
+            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
             padding: 8,
-            minWidth: 220,
+            minWidth: isDesktop ? 240 : 'auto',
             zIndex: 1000,
             border: '1px solid #E8ECFF'
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#B0B8C9', padding: '4px 8px', textTransform: 'uppercase' }}>Tes Tableaux</p>
-            {dashboards.map(dash => (
-              <div key={dash.id} style={{ display: 'flex', alignItems: 'center' }}>
-                <button
-                  onClick={() => { switchDashboard(dash); setIsOpen(false); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    flex: 1,
-                    padding: '8px 12px',
-                    border: 'none',
-                    background: activeDashboard.id === dash.id ? '#A0D2EB10' : 'transparent',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeDashboard.id === dash.id ? '#A0D2EB' : '#D1D5DB' }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: activeDashboard.id === dash.id ? '#A0D2EB' : '#4B5563' }}>{dash.name}</span>
-                  {dash.owner_id !== user?.id && <Users size={12} style={{ color: '#B0B8C9', marginLeft: 'auto' }} />}
-                </button>
-                {activeDashboard.id === dash.id && isOwner && (
-                    <button 
-                        onClick={() => { setShowManageModal(true); setIsOpen(false); }}
-                        style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', color: '#B0B8C9' }}
-                        title="Gérer les membres"
-                    >
-                        <Users size={16} />
-                    </button>
-                )}
-              </div>
-            ))}
+            <p style={{ fontSize: 11, fontWeight: 800, color: '#B0B8C9', padding: '4px 8px 8px', textTransform: 'uppercase' }}>Vos Budgets</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {dashboards.map(dash => (
+                <div key={dash.id} style={{ display: 'flex', alignItems: 'center' }}>
+                  <button
+                    onClick={() => { switchDashboard(dash); setIsOpen(false); }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: activeDashboard.id === dash.id ? '#A0D2EB15' : 'transparent',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background 0.2s'
+                    }}
+                  >
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeDashboard.id === dash.id ? '#A0D2EB' : '#D1D5DB' }} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: activeDashboard.id === dash.id ? '#A0D2EB' : 'inherit' }}>{dash.name}</span>
+                    {dash.owner_id !== user?.id && <Users size={14} style={{ color: '#B0B8C9', marginLeft: 'auto' }} />}
+                  </button>
+                  {activeDashboard.id === dash.id && (
+                      <button 
+                          onClick={() => { setShowSettingsModal(true); setIsOpen(false); }}
+                          style={{ background: '#F8FAFC', border: '1px solid #E8ECFF', borderRadius: 10, padding: '8px', cursor: 'pointer', color: '#4A6984', marginLeft: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Paramètres"
+                      >
+                          <Settings size={16} />
+                      </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
             <div style={{ height: 1, background: '#F5F7FF', margin: '8px 0' }} />
+            
             <button
-              onClick={handleCreate}
+              onClick={() => { setShowCreateModal(true); setIsOpen(false); }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 12,
                 width: '100%',
-                padding: '8px 12px',
+                padding: '10px 12px',
                 border: 'none',
-                background: 'transparent',
-                borderRadius: 8,
+                background: '#A0D2EB15',
+                borderRadius: 12,
                 cursor: 'pointer',
                 textAlign: 'left',
                 color: '#A0D2EB'
               }}
             >
-              <Plus size={16} />
-              <span style={{ fontSize: 14, fontWeight: 700 }}>Nouveau tableau</span>
+              <div style={{ background: 'white', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Plus size={14} strokeWidth={3} />
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 800 }}>Nouveau budget</span>
             </button>
           </div>
         </>
       )}
 
-      {/* Modale de gestion des membres */}
-      <BottomModal 
-        isOpen={showManageModal} 
-        onClose={() => setShowManageModal(false)}
-        title={`Membres de "${activeDashboard.name}"`}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Liste des membres */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {activeDashboard.members?.map(member => (
-                    <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px', background: '#F9FAFB', borderRadius: 12 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#E5BA73,#A0D2EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>
-                            {member.profile?.full_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 14, fontWeight: 700, color: '#4A6984', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {member.profile?.full_name || 'Utilisateur inconnu'}
-                                {member.user_id === user?.id && <span style={{ color: '#B0B8C9', fontWeight: 500, fontSize: 12 }}> (Toi)</span>}
-                            </p>
-                            <p style={{ fontSize: 11, color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {member.role === 'owner' ? 'Propriétaire' : 'Éditeur'} • {member.profile?.email}
-                            </p>
-                        </div>
-                        {member.role !== 'owner' && isOwner && (
-                            <button 
-                                onClick={() => handleRemoveMember(member.user_id)}
-                                style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            {/* Formulaire d'invitation */}
-            <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#4A6984' }}>Inviter par email</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <input 
-                        type="email" 
-                        required
-                        placeholder="email@exemple.com"
-                        value={inviteEmail}
-                        onChange={e => setInviteEmail(e.target.value)}
-                        style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid #E5E7EB', outline: 'none', fontSize: 14 }}
-                    />
-                    <button 
-                        type="submit"
-                        disabled={isInviting}
-                        style={{ background: '#A0D2EB', color: 'white', border: 'none', borderRadius: 12, padding: '0 16px', cursor: 'pointer' }}
-                    >
-                        {isInviting ? '...' : <UserPlus size={20} />}
-                    </button>
-                </div>
-                <p style={{ fontSize: 11, color: '#B0B8C9' }}>L'utilisateur doit déjà avoir un compte LunaBudget.</p>
-            </form>
-        </div>
-      </BottomModal>
+      {/* Nouveaux modales de gestion */}
+      <DashboardSettingsModal 
+        isOpen={showSettingsModal} 
+        onClose={() => setShowSettingsModal(false)} 
+      />
+      
+      <CreateDashboardModal 
+        isOpen={showCreateModal} 
+        onClose={() => setShowCreateModal(false)} 
+      />
     </div>
   );
 };
