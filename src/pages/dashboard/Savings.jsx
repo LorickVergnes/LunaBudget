@@ -6,6 +6,7 @@ import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate, getTodayStr } from '../../lib/dateUtils';
+import { getMonthStatus, filterRealized, sumAmounts } from '../../lib/budgetCalculations';
 import { Plus, Check, Loader2, Trash2, Pencil, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -19,7 +20,7 @@ import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 import IconSelector from '../../components/ui/IconSelector';
-import { getIconComponent } from '../../lib/iconRegistry';
+import IconBubble from '../../components/ui/IconBubble';
 import ColorPicker from '../../components/ui/ColorPicker';
 import useDesktop from '../../hooks/useDesktop';
 
@@ -32,15 +33,6 @@ const ProgressLinear = ({ value, max, color, height = 6 }) => {
   return (
     <div style={{ height, borderRadius: 99, background: 'transparent', overflow: 'hidden' }}>
       <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: color, transition: 'width .7s ease' }} />
-    </div>
-  );
-};
-
-const IconBubble = ({ icon, color, size = 42 }) => {
-  const IC = getIconComponent(icon);
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <IC size={size * 0.45} style={{ color }} />
     </div>
   );
 };
@@ -85,36 +77,28 @@ const Savings = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' });
 
+  const dashboardId = activeDashboard?.id;
+
   const fetchData = useCallback(async () => {
-    if (!activeDashboard) return;
+    if (!dashboardId) return;
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
+      await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
       const { data: savs } = await supabase.from('savings')
         .select('*, saving_entries(amount, date)')
-        .eq('dashboard_id', activeDashboard.id)
+        .eq('dashboard_id', dashboardId)
         .eq('month_date', formatMonthDate(selectedDate))
         .eq('is_hidden', false);
 
-      const now = new Date();
       const todayStr = getTodayStr();
-      const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
-      const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthStatus = getMonthStatus(selectedDate);
 
-      setSavings((savs || []).map(s => {
-        const allEntries = s.saving_entries || [];
-        const realEntries = allEntries.filter(e => {
-          if (isPastMonth) return true;
-          if (isFutureMonth) return false;
-          return e.date <= todayStr;
-        });
-        return {
-          ...s,
-          currentReal: realEntries.reduce((a, c) => a + parseFloat(c.amount), 0)
-        };
-      }));
+      setSavings((savs || []).map(s => ({
+        ...s,
+        currentReal: sumAmounts(filterRealized(s.saving_entries, monthStatus, todayStr))
+      })));
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  }, [activeDashboard?.id, selectedDate]);
+  }, [dashboardId, selectedDate]);
 
   useEffect(() => { 
     if (user) {
@@ -217,8 +201,8 @@ const Savings = () => {
     } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
   };
 
-  const totalTarget = savings.reduce((a, c) => a + parseFloat(c.target_amount), 0);
-  const totalSaved = savings.reduce((a, c) => a + c.currentReal, 0);
+  const totalTarget = sumAmounts(savings, 'target_amount');
+  const totalSaved = sumAmounts(savings, 'currentReal');
 
   const modalForm = (
     <BottomModal isOpen={showForm} onClose={resetForm} title={editingId ? "Modifier l'objectif" : "Nouvel objectif"}>

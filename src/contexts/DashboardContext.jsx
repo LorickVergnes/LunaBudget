@@ -9,10 +9,11 @@ export const DashboardProvider = ({ children }) => {
   const [dashboards, setDashboards] = useState([]);
   const [activeDashboard, setActiveDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
+  const userId = user?.id;
 
   // Fonction centrale de récupération
   const fetchDashboards = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setDashboards([]);
       setActiveDashboard(null);
       setLoading(false);
@@ -37,7 +38,7 @@ export const DashboardProvider = ({ children }) => {
       setDashboards(data || []);
       
       // Gestion du dashboard actif
-      const savedId = localStorage.getItem(`activeDashboard_${user.id}`);
+      const savedId = localStorage.getItem(`activeDashboard_${userId}`);
       const found = data?.find(d => d.id === savedId) || data?.[0];
       setActiveDashboard(found || null);
 
@@ -46,19 +47,19 @@ export const DashboardProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   // Synchronisation avec l'Auth
   useEffect(() => {
     if (!authLoading) {
       fetchDashboards();
     }
-  }, [authLoading, user?.id, fetchDashboards]);
+  }, [authLoading, fetchDashboards]);
 
   const switchDashboard = useCallback((dashboard) => {
     setActiveDashboard(dashboard);
-    if (user) localStorage.setItem(`activeDashboard_${user.id}`, dashboard.id);
-  }, [user?.id]);
+    if (userId) localStorage.setItem(`activeDashboard_${userId}`, dashboard.id);
+  }, [userId]);
 
   const createDashboard = useCallback(async (name) => {
     if (!user) return;

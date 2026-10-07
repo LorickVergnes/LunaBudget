@@ -16,10 +16,24 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
 
-      - name: Install and Build 🔧
-        run: |
-          npm install
-          npm run build
+      - name: Setup Node ⚙️
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22  # Version minimale requise par Vitest
+          cache: npm
+
+      - name: Install 📦
+        run: npm ci  # Installe exactement les versions du package-lock.json
+
+      # Un lint ou un test en échec bloque le déploiement
+      - name: Lint 🔍
+        run: npm run lint
+
+      - name: Test 🧪
+        run: npm test
+
+      - name: Build 🔧
+        run: npm run build
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4

@@ -6,6 +6,7 @@ import { useMonth } from '../../contexts/MonthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate, getTodayStr } from '../../lib/dateUtils';
+import { getMonthStatus, filterRealized, sumAmounts } from '../../lib/budgetCalculations';
 import { Plus, Check, Loader2, Trash2, ChevronRight, RotateCw, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -19,7 +20,7 @@ import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput } from '../../components/ui/FormUI';
 import IconSelector from '../../components/ui/IconSelector';
-import { getIconComponent } from '../../lib/iconRegistry';
+import IconBubble from '../../components/ui/IconBubble';
 import DonutChart from '../../components/ui/DonutChart';
 import ColorPicker from '../../components/ui/ColorPicker';
 import { ALL_COLORS } from '../../lib/colorUtils';
@@ -34,15 +35,6 @@ const ProgressLinear = ({ value, max, color, height = 6 }) => {
   return (
     <div style={{ height, borderRadius: 99, background: 'transparent', overflow: 'hidden' }}>
       <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: color, transition: 'width .7s ease' }} />
-    </div>
-  );
-};
-
-const IconBubble = ({ icon, color, size = 42 }) => {
-  const IC = getIconComponent(icon);
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <IC size={size * 0.45} style={{ color }} />
     </div>
   );
 };
@@ -87,36 +79,28 @@ const Envelopes = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false });
 
+  const dashboardId = activeDashboard?.id;
+
   const fetchData = useCallback(async () => {
-    if (!activeDashboard) return;
+    if (!dashboardId) return;
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
+      await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
       const { data: envs } = await supabase.from('envelopes')
         .select('*, envelope_expenses(amount, date)')
-        .eq('dashboard_id', activeDashboard.id)
+        .eq('dashboard_id', dashboardId)
         .eq('month_date', formatMonthDate(selectedDate))
         .eq('is_hidden', false);
 
-      const now = new Date();
       const todayStr = getTodayStr();
-      const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
-      const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthStatus = getMonthStatus(selectedDate);
 
-      setEnvelopes((envs || []).map(env => {
-        const allExpenses = env.envelope_expenses || [];
-        const realExpenses = allExpenses.filter(e => {
-          if (isPastMonth) return true;
-          if (isFutureMonth) return false;
-          return e.date <= todayStr;
-        });
-        return {
-          ...env,
-          spent: realExpenses.reduce((a, c) => a + parseFloat(c.amount), 0)
-        };
-      }));
+      setEnvelopes((envs || []).map(env => ({
+        ...env,
+        spent: sumAmounts(filterRealized(env.envelope_expenses, monthStatus, todayStr))
+      })));
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  }, [activeDashboard?.id, selectedDate]);
+  }, [dashboardId, selectedDate]);
 
   useEffect(() => { 
     if (user) {
@@ -219,9 +203,8 @@ const Envelopes = () => {
     } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
   };
 
-  const totalBudget = envelopes.reduce((a, c) => a + parseFloat(c.max_amount), 0);
-  const totalSpent = envelopes.reduce((a, c) => a + c.spent, 0);
-  const totalLeft = Math.max(totalBudget - totalSpent, 0);
+  const totalBudget = sumAmounts(envelopes, 'max_amount');
+  const totalSpent = sumAmounts(envelopes, 'spent');
   const pctTotal = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   const modalForm = (

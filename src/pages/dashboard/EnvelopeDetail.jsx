@@ -37,16 +37,18 @@ const EnvelopeDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ name: '', amount: '', date: getTodayStr() });
 
+  const dashboardId = activeDashboard?.id;
+
   const fetchData = useCallback(async () => {
-    if (!activeDashboard) return;
+    if (!dashboardId) return;
     setLoading(true);
     const { data } = await supabase.from('envelope_expenses').select('*')
       .eq('envelope_id', id)
-      .eq('dashboard_id', activeDashboard.id)
+      .eq('dashboard_id', dashboardId)
       .order('date', { ascending: false });
     setExpenses(data || []);
     setLoading(false);
-  }, [activeDashboard?.id, id]);
+  }, [dashboardId, id]);
 
   useEffect(() => { 
     if (user) {

@@ -6,6 +6,7 @@ import { useMonth } from '../../contexts/MonthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
+import { getMonthStatus, isRealized, filterRealized, sumAmounts } from '../../lib/budgetCalculations';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -42,19 +43,21 @@ const Expenses = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', amount: '', date: getTodayStr(), is_recurrent: false, icon: 'Home', color: '#E5BA73' });
 
+  const dashboardId = activeDashboard?.id;
+
   const fetchData = useCallback(async () => {
-    if (!activeDashboard) return;
+    if (!dashboardId) return;
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
+      await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
       const { data, error } = await supabase.from('expenses').select('*')
-        .eq('dashboard_id', activeDashboard.id)
+        .eq('dashboard_id', dashboardId)
         .eq('month_date', formatMonthDate(selectedDate))
         .eq('is_hidden', false)
         .order('date', { ascending: false });
       if (!error) setExpenses(data || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  }, [activeDashboard?.id, selectedDate]);
+  }, [dashboardId, selectedDate]);
 
   useEffect(() => { 
     if (user) {
@@ -83,20 +86,13 @@ const Expenses = () => {
     showToast(`${name} a été ${labels[eventType] || 'modifiée'} par un collaborateur`, { type: 'info', duration: 4000 });
   }, [selectedDate, user?.id, fetchData, showToast]));
 
-  const now = new Date();
   const todayStr = getTodayStr();
-  const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
-  const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthStatus = getMonthStatus(selectedDate);
 
-  const filteredExpenses = expenses.filter(exp => {
-    if (showForecast) return true;
-    if (isPastMonth) return true;
-    if (isFutureMonth) return false;
-    return exp.date <= todayStr;
-  });
+  const filteredExpenses = showForecast ? expenses : filterRealized(expenses, monthStatus, todayStr);
 
-  const total = filteredExpenses.reduce((a, c) => a + parseFloat(c.amount), 0);
-  const totalForecast = expenses.reduce((a, c) => a + parseFloat(c.amount), 0);
+  const total = sumAmounts(filteredExpenses);
+  const totalForecast = sumAmounts(expenses);
 
   const handleAdd = async (e) => {
     e.preventDefault(); setLoading(true);
@@ -215,7 +211,7 @@ const Expenses = () => {
 
   const ExpenseItem = ({ exp, i }) => {
     const IC = getIconComponent(exp.icon);
-    const isUpcoming = exp.date > todayStr && !isPastMonth;
+    const isUpcoming = !isRealized(exp.date, monthStatus, todayStr);
     const isHidden = !showForecast && isUpcoming;
     return (
       <div className="card fade-up" style={{

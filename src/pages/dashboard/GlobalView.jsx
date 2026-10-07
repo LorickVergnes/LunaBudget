@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { formatMonthDate, getTodayStr, addMonths } from '../../lib/dateUtils';
+import { computeMonthTotals } from '../../lib/budgetCalculations';
 import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomNav from '../../components/layout/BottomNav';
@@ -22,70 +23,47 @@ const GlobalView = () => {
     const [allTimeBalance, setAllTimeBalance] = useState(0);
     const [showForecast, setShowForecast] = useState(false);
 
+    const dashboardId = activeDashboard?.id;
+
     // Reset to current month on mount
     useEffect(() => {
         setSelectedDate(new Date());
-    }, []);
+    }, [setSelectedDate]);
 
-    useEffect(() => { 
-        if (user) {
-            if (activeDashboard) {
-                fetchGlobal();
-            } else if (!dashLoading) {
-                setLoading(false);
-            }
-        }
-    }, [user, selectedDate, showForecast, activeDashboard, dashLoading]);
-
-    const fetchGlobal = async () => {
-        if (!activeDashboard) return;
+    const fetchGlobal = useCallback(async () => {
+        if (!dashboardId) return;
         setLoading(true);
         try {
-            const now = new Date();
             const todayStr = getTodayStr();
-            const currentMonthStrFull = formatMonthDate(now);
+            const currentMonthStrFull = formatMonthDate(new Date());
 
             const currentMonthStr = formatMonthDate(selectedDate);
             const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
-                supabase.from('incomes').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr),
-                supabase.from('envelopes').select('max_amount, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', activeDashboard.id).lte('month_date', currentMonthStr),
+                supabase.from('incomes').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
+                supabase.from('envelopes').select('max_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+                supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
             ]);
 
             const getMonthlyTotals = (monthStr, isForecastActive) => {
-                const isThisMonth = monthStr === currentMonthStrFull;
-                const isPastMonth = monthStr < currentMonthStrFull;
-                
-                const useForecastLogic = isForecastActive && isThisMonth;
+                const monthStatus = monthStr < currentMonthStrFull ? 'past' : monthStr === currentMonthStrFull ? 'current' : 'future';
+                const ofMonth = (list) => (list || []).filter(x => x.month_date === monthStr);
 
-                const mInc = (allInc || []).filter(x => x.month_date === monthStr);
-                const mExp = (allExp || []).filter(x => x.month_date === monthStr);
-                const mEnvExp = (allEnvExp || []).filter(x => x.month_date === monthStr);
-                const mEnvs = (allEnvs || []).filter(x => x.month_date === monthStr);
-                const mSav = (allSav || []).filter(x => x.month_date === monthStr);
-                const mSavEnt = (allSavEntries || []).filter(x => x.month_date === monthStr);
+                const { real, forecast } = computeMonthTotals(
+                    {
+                        incomes: ofMonth(allInc), expenses: ofMonth(allExp),
+                        envelopes: ofMonth(allEnvs), envelopeExpenses: ofMonth(allEnvExp),
+                        savings: ofMonth(allSav), savingEntries: ofMonth(allSavEntries)
+                    },
+                    monthStatus,
+                    todayStr
+                );
+                // Le prévisionnel ne s'applique qu'au mois en cours
+                const totals = isForecastActive && monthStatus === 'current' ? forecast : real;
 
-                const filterReal = (list, key = 'date') => list.filter(item => {
-                    if (isPastMonth) return true;
-                    return item[key] <= todayStr;
-                });
-
-                const income = (useForecastLogic ? mInc : filterReal(mInc)).reduce((a, c) => a + parseFloat(c.amount), 0);
-                
-                const expense = (useForecastLogic ? mExp : filterReal(mExp)).reduce((a, c) => a + parseFloat(c.amount), 0)
-                    + (useForecastLogic 
-                        ? mEnvs.reduce((a, c) => a + parseFloat(c.max_amount), 0)
-                        : filterReal(mEnvExp).reduce((a, c) => a + parseFloat(c.amount), 0)
-                      )
-                    + (useForecastLogic 
-                        ? mSav.reduce((a, c) => a + parseFloat(c.target_amount), 0)
-                        : filterReal(mSavEnt).reduce((a, c) => a + parseFloat(c.amount), 0)
-                      );
-
-                return { income, expense };
+                return { income: totals.income, expense: totals.fixedExp + totals.envExp + totals.savings };
             };
 
             const result = [];
@@ -117,7 +95,17 @@ const GlobalView = () => {
 
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    };
+    }, [dashboardId, selectedDate, showForecast]);
+
+    useEffect(() => {
+        if (user) {
+            if (activeDashboard) {
+                fetchGlobal();
+            } else if (!dashLoading) {
+                setLoading(false);
+            }
+        }
+    }, [user, activeDashboard, dashLoading, fetchGlobal]);
 
     const allIncome = months.reduce((a, m) => a + m.income, 0);
     const allExpense = months.reduce((a, m) => a + m.expense, 0);

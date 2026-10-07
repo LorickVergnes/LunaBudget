@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
+import {
+  getMonthStatus, filterRealized, sumAmounts, computeBalance, computeMonthTotals,
+  getDaysLeftInMonth, getDaysInMonth
+} from '../../lib/budgetCalculations';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
@@ -17,16 +21,7 @@ import {
   CreditCard, Mail, PiggyBank, Info, ChevronRight, AlertTriangle, Wallet,
   ArrowDownLeft, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Sparkles, Repeat
 } from 'lucide-react';
-import { getIconComponent } from '../../lib/iconRegistry';
-
-const IconBubble = ({ icon, color, size = 42 }) => {
-  const IC = typeof icon === 'string' ? getIconComponent(icon) : icon;
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      {IC && <IC size={size * 0.45} style={{ color }} />}
-    </div>
-  );
-};
+import IconBubble from '../../components/ui/IconBubble';
 
 const ProgressLinear = ({ value, max, color }) => {
   const pct = Math.min(100, Math.max(0, (value / max) * 100)) || 0;
@@ -79,7 +74,7 @@ const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
 };
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { selectedDate, setSelectedDate } = useMonth();
   const { activeDashboard, loading: dashLoading } = useDashboard();
   const navigate = useNavigate();
@@ -91,55 +86,35 @@ const Dashboard = () => {
   const [recentOps, setRecentOps] = useState([]);
   const [envelopesPreview, setEnvelopesPreview] = useState([]);
 
-  useEffect(() => {
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, selectedDate, activeDashboard, dashLoading]);
+  const dashboardId = activeDashboard?.id;
 
-  const fetchData = async () => {
-    if (!activeDashboard) return;
+  const fetchData = useCallback(async () => {
+    if (!dashboardId) return;
     setLoading(true);
     try {
-      await recurrenceService.checkAndApplyRecurrence(activeDashboard.id, selectedDate);
+      await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
       const monthStr = formatMonthDate(selectedDate);
       const [
         { data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }
       ] = await Promise.all([
-        supabase.from('incomes').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('expenses').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('envelope_expenses').select('id, amount, date, name, icon, color, envelope_id').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr),
-        supabase.from('envelopes').select('id, name, max_amount, icon, color').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('saving_entries').select('id, amount, date, savings(name, icon, color)').eq('dashboard_id', activeDashboard.id).eq('month_date', monthStr),
+        supabase.from('incomes').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('expenses').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('envelope_expenses').select('id, amount, date, name, icon, color, envelope_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
+        supabase.from('envelopes').select('id, name, max_amount, icon, color').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+        supabase.from('saving_entries').select('id, amount, date, savings(name, icon, color)').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
       ]);
 
-      const now = new Date();
       const todayStr = getTodayStr();
-      const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
-      const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthStatus = getMonthStatus(selectedDate);
 
-      const filterReal = (list, key = 'date') => (list || []).filter(item => {
-        if (isPastMonth) return true;
-        if (isFutureMonth) return false;
-        return item[key] <= todayStr;
-      });
-
-      const totalIncForecast = (inc || []).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const totalIncReal = filterReal(inc).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const totalFixedForecast = (exp || []).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const totalFixedReal = filterReal(exp).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const totalEnvForecast = (envs || []).reduce((a, c) => a + parseFloat(c.max_amount), 0);
-      const totalEnvReal = filterReal(envExp).reduce((a, c) => a + parseFloat(c.amount), 0);
-      const totalSavForecast = (sav || []).reduce((a, c) => a + parseFloat(c.target_amount), 0);
-      const totalSavReal = filterReal(savEntries).reduce((a, c) => a + parseFloat(c.amount), 0);
-
-      setForecastData({ income: totalIncForecast, fixedExp: totalFixedForecast, envExp: totalEnvForecast, savings: totalSavForecast });
-      setData({ income: totalIncReal, fixedExp: totalFixedReal, envExp: totalEnvReal, savings: totalSavReal });
+      const { real, forecast } = computeMonthTotals(
+        { incomes: inc, expenses: exp, envelopes: envs, envelopeExpenses: envExp, savings: sav, savingEntries: savEntries },
+        monthStatus,
+        todayStr
+      );
+      setForecastData(forecast);
+      setData(real);
 
       const recent = [
         ...(inc || []).map(i => ({ ...i, type: 'income', label: i.name })),
@@ -158,8 +133,9 @@ const Dashboard = () => {
 
       setRecentOps(recent);
 
+      const realEnvExp = filterRealized(envExp, monthStatus, todayStr);
       const envPreview = (envs || []).map(env => {
-        const spent = filterReal(envExp).filter(ex => ex.envelope_id === env.id).reduce((a, c) => a + parseFloat(c.amount), 0);
+        const spent = sumAmounts(realEnvExp.filter(ex => ex.envelope_id === env.id));
         return {
           id: env.id,
           name: env.name,
@@ -173,25 +149,30 @@ const Dashboard = () => {
 
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  };
+  }, [dashboardId, selectedDate]);
+
+  useEffect(() => {
+    if (user) {
+      if (activeDashboard) {
+        fetchData();
+      } else if (!dashLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user, selectedDate, activeDashboard, dashLoading, fetchData]);
 
   const activeData = showForecast ? forecastData : data;
-  const balance = activeData.income - (activeData.fixedExp + activeData.envExp) - activeData.savings;
+  const balance = computeBalance(activeData);
   const expenseTotal = activeData.fixedExp + activeData.envExp;
 
   const now = new Date();
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const viewingMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-  const isCurrentMonth = currentMonth.getTime() === viewingMonth.getTime();
-  const isPastMonth = viewingMonth.getTime() < currentMonth.getTime();
-  const isFutureMonth = viewingMonth.getTime() > currentMonth.getTime();
+  const monthStatus = getMonthStatus(selectedDate, now);
 
   let tipMessage = null;
-  if (isCurrentMonth) {
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = Math.max(lastDayOfMonth - now.getDate() + 1, 1);
+  if (monthStatus === 'current') {
+    const daysLeft = getDaysLeftInMonth(now);
     if (showForecast) {
-      const perDay = (forecastData.income - forecastData.fixedExp - forecastData.envExp - forecastData.savings) / 30;
+      const perDay = computeBalance(forecastData) / 30;
       tipMessage = <>Prévisionnel : Fin de mois avec environ <strong>{balance.toLocaleString('fr-FR')} €</strong> ({perDay.toFixed(2)} €/j).</>;
     } else {
       if (balance >= 0) {
@@ -201,11 +182,10 @@ const Dashboard = () => {
         tipMessage = <>Budget dépassé de <strong>{Math.abs(balance).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>. Attention aux dépenses non essentielles.</>;
       }
     }
-  } else if (isPastMonth) {
+  } else if (monthStatus === 'past') {
     tipMessage = <>Bilan : Solde de <strong>{balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>. {balance >= 0 ? "Bravo !" : "On fera mieux !"}</>;
-  } else if (isFutureMonth) {
-    const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
-    const perDay = balance / daysInMonth;
+  } else {
+    const perDay = balance / getDaysInMonth(selectedDate);
     tipMessage = <>Prévision : <strong>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong> / jour.</>;
   }
 

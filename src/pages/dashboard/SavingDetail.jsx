@@ -37,16 +37,18 @@ const SavingDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({ amount: '', date: getTodayStr() });
 
+  const dashboardId = activeDashboard?.id;
+
   const fetchData = useCallback(async () => {
-    if (!activeDashboard) return;
+    if (!dashboardId) return;
     setLoading(true);
     const { data } = await supabase.from('saving_entries').select('*')
       .eq('saving_id', id)
-      .eq('dashboard_id', activeDashboard.id)
+      .eq('dashboard_id', dashboardId)
       .order('date', { ascending: false });
     setEntries(data || []);
     setLoading(false);
-  }, [activeDashboard?.id, id]);
+  }, [dashboardId, id]);
 
   useEffect(() => { 
     if (user) {

@@ -28,7 +28,9 @@ import { supabase } from '../lib/supabaseClient';
 export function useRealtimeTable(table, dashboardId, onRealtimeChange) {
   // Ref pour toujours pointer vers le dernier callback sans re-souscrire
   const callbackRef = useRef(onRealtimeChange);
-  callbackRef.current = onRealtimeChange;
+  useEffect(() => {
+    callbackRef.current = onRealtimeChange;
+  });
 
   useEffect(() => {
     if (!table || !dashboardId) return;
@@ -48,13 +50,10 @@ export function useRealtimeTable(table, dashboardId, onRealtimeChange) {
         },
         (payload) => {
           const { eventType, new: newRecord, old: oldRecord } = payload;
-          console.log(`[Realtime] ${table} → ${eventType}`, payload);
           callbackRef.current(eventType, newRecord, oldRecord);
         }
       )
-      .subscribe((status) => {
-        console.log(`[Realtime] ${channelName} status:`, status);
-      });
+      .subscribe();
 
     // Cleanup: se désinscrire quand le composant démonte ou les deps changent
     return () => {

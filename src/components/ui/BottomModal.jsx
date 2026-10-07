@@ -9,13 +9,21 @@ const BottomModal = ({ isOpen, onClose, title, children }) => {
   const startY = useRef(0);
   const modalRef = useRef(null);
 
+  // Remise à zéro à la fermeture
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen);
+    if (!isOpen) {
+      setShow(false);
+      setDragY(0);
+    }
+  }
+
   useEffect(() => {
     if (isOpen) {
       requestAnimationFrame(() => setShow(true));
       document.body.style.overflow = 'hidden';
     } else {
-      setShow(false);
-      setDragY(0);
       const otherModals = document.querySelectorAll('[data-modal-open="true"]');
       if (otherModals.length <= 1) {
         document.body.style.overflow = 'auto';

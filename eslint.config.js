@@ -23,7 +23,16 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Les composants reçus en paramètre ({ icon: Icon }) ne sont utilisés qu'en JSX
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+      // Chaque contexte exporte son Provider et son hook dans le même fichier
+      'react-refresh/only-export-components': ['error', {
+        allowExportNames: ['useAuthContext', 'useDashboard', 'useMonth', 'useToast'],
+      }],
     },
+  },
+  {
+    files: ['public/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
   },
 ])
