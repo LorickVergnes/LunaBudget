@@ -5,7 +5,7 @@ import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
-import { formatMonthDate } from '../../lib/dateUtils';
+import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import { ArrowLeft, Plus, Check, Loader2, Trash2, Calendar, Pencil, ShoppingCart } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getIconComponent } from '../../lib/iconRegistry';
@@ -35,7 +35,7 @@ const EnvelopeDetail = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
+  const [formData, setFormData] = useState({ name: '', amount: '', date: getTodayStr() });
 
   const fetchData = useCallback(async () => {
     if (!activeDashboard) return;
@@ -101,11 +101,11 @@ const EnvelopeDetail = () => {
     };
     if (editingId) {
       const { error } = await supabase.from('envelope_expenses').update(data).eq('id', editingId);
-      if (!error) { showToast('Dépense modifiée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); setEditingId(null); fetchData(); }
+      if (!error) { showToast('Dépense modifiée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: getTodayStr() }); setShowForm(false); setEditingId(null); fetchData(); }
       else { setLoading(false); showToast(error.message, { type: 'error' }); }
     } else {
       const { error } = await supabase.from('envelope_expenses').insert([data]);
-      if (!error) { showToast('Dépense ajoutée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] }); setShowForm(false); fetchData(); }
+      if (!error) { showToast('Dépense ajoutée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: getTodayStr() }); setShowForm(false); fetchData(); }
       else { setLoading(false); showToast(error.message, { type: 'error' }); }
     }
   };
@@ -172,7 +172,7 @@ const EnvelopeDetail = () => {
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: '#4A6984', marginBottom: 2 }}>{exp.name}</p>
                   <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
-                    {parseFloat(exp.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {new Date(exp.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    {parseFloat(exp.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {parseLocalDate(exp.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -203,7 +203,7 @@ const EnvelopeDetail = () => {
 
       {!showForm && (
         <button onClick={() => {
-          setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
+          setFormData({ name: '', amount: '', date: getTodayStr() });
           setEditingId(null);
           setShowForm(true);
         }}

@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { formatMonthDate } from '../../lib/dateUtils';
+import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import BottomNav from '../../components/layout/BottomNav';
@@ -119,7 +119,7 @@ const Dashboard = () => {
       ]);
 
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
+      const todayStr = getTodayStr();
       const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
       const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -345,7 +345,7 @@ const Dashboard = () => {
                   {t.is_recurrent && <Repeat size={11} style={{ color: "#A0D2EB", flexShrink: 0 }} />}
                 </div>
                 <div style={{ fontSize: 11, color: "#B0B8C9", fontWeight: 600, marginTop: 2 }}>
-                  {new Date(t.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  {parseLocalDate(t.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                 </div>
               </div>
               <div style={{ fontWeight: 800, fontSize: 14, color: t.type === 'income' ? '#16A34A' : '#4A6984', whiteSpace: "nowrap" }}>

@@ -5,7 +5,7 @@ import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
-import { formatMonthDate } from '../../lib/dateUtils';
+import { formatMonthDate, getTodayStr } from '../../lib/dateUtils';
 import { Plus, Check, Loader2, Trash2, Pencil, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -97,7 +97,7 @@ const Savings = () => {
         .eq('is_hidden', false);
 
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
+      const todayStr = getTodayStr();
       const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
       const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
 

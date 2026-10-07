@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { formatMonthDate } from '../../lib/dateUtils';
+import { formatMonthDate, getTodayStr, addMonths } from '../../lib/dateUtils';
 import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomNav from '../../components/layout/BottomNav';
@@ -42,8 +42,7 @@ const GlobalView = () => {
         setLoading(true);
         try {
             const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
-            const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const todayStr = getTodayStr();
             const currentMonthStrFull = formatMonthDate(now);
 
             const currentMonthStr = formatMonthDate(selectedDate);
@@ -58,7 +57,7 @@ const GlobalView = () => {
 
             const getMonthlyTotals = (monthStr, isForecastActive) => {
                 const isThisMonth = monthStr === currentMonthStrFull;
-                const isPastMonth = new Date(monthStr + "-01") < currentMonthStart;
+                const isPastMonth = monthStr < currentMonthStrFull;
                 
                 const useForecastLogic = isForecastActive && isThisMonth;
 
@@ -91,8 +90,7 @@ const GlobalView = () => {
 
             const result = [];
             for (let i = 5; i >= 0; i--) {
-                const d = new Date(selectedDate);
-                d.setMonth(d.getMonth() - i);
+                const d = addMonths(selectedDate, -i);
                 const str = formatMonthDate(d);
                 const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
                 

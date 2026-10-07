@@ -5,7 +5,7 @@ import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
-import { formatMonthDate } from '../../lib/dateUtils';
+import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -40,7 +40,7 @@ const Expenses = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showForecast, setShowForecast] = useState(false);
   const [deletingItem, setDeletingItem] = useState(null);
-  const [formData, setFormData] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Home', color: '#E5BA73' });
+  const [formData, setFormData] = useState({ name: '', amount: '', date: getTodayStr(), is_recurrent: false, icon: 'Home', color: '#E5BA73' });
 
   const fetchData = useCallback(async () => {
     if (!activeDashboard) return;
@@ -84,7 +84,7 @@ const Expenses = () => {
   }, [selectedDate, user?.id, fetchData, showToast]));
 
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = getTodayStr();
   const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
   const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -120,7 +120,7 @@ const Expenses = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Home', color: '#E5BA73' });
+    setFormData({ name: '', amount: '', date: getTodayStr(), is_recurrent: false, icon: 'Home', color: '#E5BA73' });
     setShowForm(false);
     setEditingId(null);
   };
@@ -233,7 +233,7 @@ const Expenses = () => {
             {exp.name} {isUpcoming && <span style={{ fontSize: 10, color: '#E5BA73', fontWeight: 600, marginLeft: 4 }}>(Prévu)</span>}
           </p>
           <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
-            {parseFloat(exp.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {new Date(exp.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+            {parseFloat(exp.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {parseLocalDate(exp.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

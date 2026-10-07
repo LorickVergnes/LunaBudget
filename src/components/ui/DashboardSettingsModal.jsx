@@ -201,7 +201,7 @@ const DashboardSettingsModal = ({ isOpen, onClose }) => {
                     </p>
                     <p style={{ fontSize: 12, color: '#8892A4', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
                       {member.role === 'owner' ? <Shield size={12} color="#E5BA73" /> : null}
-                      {member.role === 'owner' ? 'Propriétaire' : 'Éditeur'} • {member.profile?.email}
+                      {member.role === 'owner' ? 'Propriétaire' : member.role === 'viewer' ? 'Lecteur' : 'Éditeur'} • {member.profile?.email}
                     </p>
                   </div>
                   {member.role !== 'owner' && isOwner && (

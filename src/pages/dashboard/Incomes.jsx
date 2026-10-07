@@ -5,7 +5,7 @@ import { useDashboard } from '../../contexts/DashboardContext';
 import { useMonth } from '../../contexts/MonthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
-import { formatMonthDate } from '../../lib/dateUtils';
+import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import { Plus, Check, Calendar, RotateCw, Loader2, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { recurrenceService } from '../../services/recurrenceService';
@@ -42,7 +42,7 @@ const Incomes = () => {
   const [showForecast, setShowForecast] = useState(false);
   const [deletingItem, setDeletingItem] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Briefcase', color: ALL_COLORS[0]
+    name: '', amount: '', date: getTodayStr(), is_recurrent: false, icon: 'Briefcase', color: ALL_COLORS[0]
   });
 
   const usedColors = incomes.filter(inc => inc.id !== editingId).map(inc => inc.color);
@@ -96,7 +96,7 @@ const Incomes = () => {
   }, [selectedDate, user?.id, fetchData, showToast]));
 
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = getTodayStr();
   const isPastMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) < new Date(now.getFullYear(), now.getMonth(), 1);
   const isFutureMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) > new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -132,7 +132,7 @@ const Incomes = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', amount: '', date: new Date().toISOString().split('T')[0], is_recurrent: false, icon: 'Briefcase', color: '#A0D2EB' });
+    setFormData({ name: '', amount: '', date: getTodayStr(), is_recurrent: false, icon: 'Briefcase', color: '#A0D2EB' });
     setShowForm(false);
     setEditingId(null);
   };
@@ -255,7 +255,7 @@ const Incomes = () => {
             {inc.name} {isUpcoming && <span style={{ fontSize: 10, color: '#E5BA73', fontWeight: 600, marginLeft: 4 }}>(Prévu)</span>}
           </p>
           <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
-            {parseFloat(inc.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {new Date(inc.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+            {parseFloat(inc.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {parseLocalDate(inc.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
