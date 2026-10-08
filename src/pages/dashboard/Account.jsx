@@ -2,12 +2,9 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../contexts/ToastContext';
-import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
-import DesktopHeader from '../../components/layout/DesktopHeader';
-import DesktopSidebar from '../../components/layout/DesktopSidebar';
 import useDesktop from '../../hooks/useDesktop';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const Account = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -118,24 +115,18 @@ const Account = () => {
 
   if (isDesktop) {
     return (
-      <div className="desktop-shell fade-in">
-        <DesktopHeader />
-        <div className="desktop-body">
-          <DesktopSidebar />
-          <main className="desktop-main">
-            <div className="desktop-greeting-toprow">
-              <div className="desktop-greeting">
-                <h1>Mon Profil 👤</h1>
-                <p>Gérez vos informations personnelles.</p>
-              </div>
-            </div>
-
-            <div className="desktop-budget-card" style={{ maxWidth: 600 }}>
-              {formContent}
-            </div>
-          </main>
+      <>
+        <div className="desktop-greeting-toprow">
+          <div className="desktop-greeting">
+            <h1>Mon Profil 👤</h1>
+            <p>Gérez vos informations personnelles.</p>
+          </div>
         </div>
-      </div>
+
+        <div className="desktop-budget-card" style={{ maxWidth: 600 }}>
+          {formContent}
+        </div>
+      </>
     );
   }
 
@@ -148,8 +139,6 @@ const Account = () => {
           {formContent}
         </div>
       </div>
-      
-      <BottomNav />
     </div>
   );
 };

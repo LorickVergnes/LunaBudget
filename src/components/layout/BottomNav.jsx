@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { CreditCard, Mail, Wallet, PiggyBank, PieChart } from 'lucide-react';
+import { CreditCard, Mail, PiggyBank, PieChart } from 'lucide-react';
 
 const TABS = [
     { to: '/incomes', label: 'Revenus', Icon: CreditCard, color: '#A0D2EB' },

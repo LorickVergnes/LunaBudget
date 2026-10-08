@@ -1,0 +1,125 @@
+// Faux client Supabase pour les tests de rendu : données fixes, aucune requête réseau.
+// Il enregistre les lectures et écritures demandées par l'application.
+
+export const USER = { id: 'u1', email: 'lorick@test.fr', user_metadata: { full_name: 'Lorick' } };
+export const OTHER_USER_ID = 'u2';
+export const DASHBOARD_ID = 'd1';
+
+const OCT = '2026-10-01';
+const SEP = '2026-09-01';
+const base = { dashboard_id: DASHBOARD_ID, is_hidden: false, created_at: '2026-10-01T08:00:00+00:00' };
+
+const envelopeExpenses = [
+  { ...base, id: 'ee1', user_id: 'u1', envelope_id: 'env1', name: 'Carrefour', amount: 35.2, date: '2026-10-10', icon: 'ShoppingCart', color: '#3b82f6', month_date: OCT },
+  { ...base, id: 'ee2', user_id: 'u2', envelope_id: 'env1', name: 'Marché', amount: 12.3, date: '2026-10-20', icon: 'ShoppingCart', color: '#3b82f6', month_date: OCT },
+  { ...base, id: 'ee3', user_id: 'u1', envelope_id: 'env2', name: 'Cinéma', amount: 18, date: '2026-10-03', icon: 'Ticket', color: '#f43f5e', month_date: OCT },
+];
+const savingEntries = [
+  { ...base, id: 'se1', user_id: 'u1', saving_id: 'sav1', amount: 50, date: '2026-10-02', month_date: OCT, savings: { name: 'Voyage', icon: 'Plane', color: '#F9A825' } },
+  { ...base, id: 'se2', user_id: 'u1', saving_id: 'sav1', amount: 25, date: '2026-10-28', month_date: OCT, savings: { name: 'Voyage', icon: 'Plane', color: '#F9A825' } },
+];
+
+export const DATA = {
+  profiles: [{ id: 'u1', email: 'lorick@test.fr', full_name: 'Lorick', avatar_url: null, role: 'free' }],
+  dashboards: [{
+    id: DASHBOARD_ID, name: 'Mon Budget', owner_id: 'u1', created_at: '2026-03-01T08:00:00+00:00',
+    members: [
+      { id: 'm1', dashboard_id: DASHBOARD_ID, user_id: 'u1', role: 'owner', profile: { full_name: 'Lorick', email: 'lorick@test.fr', avatar_url: null } },
+      { id: 'm2', dashboard_id: DASHBOARD_ID, user_id: 'u2', role: 'editor', profile: { full_name: 'Alex', email: 'alex@test.fr', avatar_url: null } },
+    ],
+  }],
+  incomes: [
+    { ...base, id: 'inc1', user_id: 'u1', name: 'Salaire', amount: 1380, date: '2026-10-06', is_recurrent: true, icon: 'Briefcase', color: '#A0D2EB', month_date: OCT },
+    { ...base, id: 'inc2', user_id: 'u2', name: 'Vente', amount: 60.5, date: '2026-10-12', is_recurrent: false, icon: 'Gift', color: '#22c55e', month_date: OCT },
+    { ...base, id: 'inc3', user_id: 'u1', name: 'CAF', amount: 175, date: '2026-10-25', is_recurrent: true, icon: null, color: null, month_date: OCT },
+    { ...base, id: 'inc0', user_id: 'u1', name: 'Salaire', amount: 1380, date: '2026-09-06', is_recurrent: true, icon: 'Briefcase', color: '#A0D2EB', month_date: SEP },
+  ],
+  expenses: [
+    { ...base, id: 'exp1', user_id: 'u1', name: 'Loyer', amount: 250, date: '2026-10-06', is_recurrent: true, icon: 'Home', color: '#E5BA73', month_date: OCT },
+    { ...base, id: 'exp2', user_id: 'u1', name: 'Garagiste', amount: 89.9, date: '2026-10-09', is_recurrent: false, icon: 'Car', color: '#ef4444', month_date: OCT },
+    { ...base, id: 'exp3', user_id: 'u2', name: 'Essence', amount: 200, date: '2026-10-27', is_recurrent: true, icon: null, color: null, month_date: OCT },
+    { ...base, id: 'exp0', user_id: 'u1', name: 'Loyer', amount: 250, date: '2026-09-06', is_recurrent: true, icon: 'Home', color: '#E5BA73', month_date: SEP },
+  ],
+  envelopes: [
+    { ...base, id: 'env1', user_id: 'u1', name: 'Courses', max_amount: 400, is_recurrent: true, icon: 'ShoppingCart', color: '#3b82f6', month_date: OCT, envelope_expenses: envelopeExpenses.filter(e => e.envelope_id === 'env1') },
+    { ...base, id: 'env2', user_id: 'u1', name: 'Loisirs', max_amount: 15, is_recurrent: false, icon: null, color: null, month_date: OCT, envelope_expenses: envelopeExpenses.filter(e => e.envelope_id === 'env2') },
+  ],
+  envelope_expenses: envelopeExpenses,
+  savings: [
+    { ...base, id: 'sav1', user_id: 'u1', name: 'Voyage', target_amount: 100, is_recurrent: true, icon: 'Plane', color: '#F9A825', month_date: OCT, max_month: '2027-03-01', saving_entries: savingEntries },
+    { ...base, id: 'sav2', user_id: 'u2', name: 'Urgences', target_amount: 40, is_recurrent: false, icon: null, color: null, month_date: OCT, max_month: null, saving_entries: [] },
+  ],
+  saving_entries: savingEntries,
+};
+
+export const log = { ops: [], reads: [] };
+let listeners = [];
+
+const sortKeys = (value) => {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(k => [k, sortKeys(value[k])]));
+  return value;
+};
+
+const matches = (row, [col, operator, val]) => {
+  if (!(col in row)) return true;
+  return operator === 'lte' ? String(row[col]) <= String(val) : String(row[col]) === String(val);
+};
+
+const execute = (st) => {
+  const filters = st.filters.map(([c, o, v]) => `${c}${o === 'lte' ? '<=' : '='}${v}`).sort();
+  if (st.op !== 'select') {
+    log.ops.push({ table: st.table, op: st.op, payload: sortKeys(st.payload), filters });
+    return { data: st.single ? { id: 'new1', ...(Array.isArray(st.payload) ? st.payload[0] : st.payload) } : null, error: null };
+  }
+  log.reads.push(`${st.table} | ${st.cols.replace(/\s+/g, ' ').trim()} | ${filters.join(' & ')}`);
+  const rows = (DATA[st.table] || []).filter(row => st.filters.every(f => matches(row, f)));
+  return { data: st.single ? rows[0] ?? null : rows, error: null };
+};
+
+const from = (table) => {
+  const st = { table, op: 'select', cols: '*', filters: [], payload: undefined, single: false };
+  const builder = {
+    select(cols = '*') { if (st.op === 'select') st.cols = cols; return builder; },
+    insert(payload) { st.op = 'insert'; st.payload = payload; return builder; },
+    update(payload) { st.op = 'update'; st.payload = payload; return builder; },
+    upsert(payload) { st.op = 'upsert'; st.payload = payload; return builder; },
+    delete() { st.op = 'delete'; return builder; },
+    eq(col, val) { st.filters.push([col, 'eq', val]); return builder; },
+    lte(col, val) { st.filters.push([col, 'lte', val]); return builder; },
+    order() { return builder; },
+    single() { st.single = true; return builder; },
+    then(resolve, reject) { return Promise.resolve().then(() => execute(st)).then(resolve, reject); },
+  };
+  return builder;
+};
+
+export const supabase = {
+  from,
+  rpc: async (name, args) => {
+    log.reads.push(`rpc ${name} | ${JSON.stringify(sortKeys(args))}`);
+    return { data: null, error: null };
+  },
+  auth: {
+    getSession: async () => ({ data: { session: { user: USER } } }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+    signOut: async () => ({ error: null }),
+    updateUser: async (payload) => { log.ops.push({ table: 'auth', op: 'updateUser', payload: sortKeys(payload), filters: [] }); return { error: null }; },
+  },
+  channel: (name) => {
+    const channel = {
+      name,
+      on(_type, config, callback) { listeners.push({ channel, table: config.table, filter: config.filter, callback }); return channel; },
+      subscribe() { return channel; },
+    };
+    return channel;
+  },
+  removeChannel: (channel) => { listeners = listeners.filter(l => l.channel !== channel); },
+};
+
+// Simule un événement temps réel reçu de Supabase
+export const emitRealtime = (table, eventType, newRecord, oldRecord) => {
+  listeners.filter(l => l.table === table).forEach(l => l.callback({ eventType, new: newRecord ?? {}, old: oldRecord ?? {} }));
+};
+export const listenedTables = () => [...new Set(listeners.map(l => l.table))].sort();
+export const resetMock = () => { log.ops.length = 0; log.reads.length = 0; listeners = []; };

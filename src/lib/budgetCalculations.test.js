@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  getMonthStatus, isRealized, filterRealized, sumAmounts,
+  getMonthStatus, isRealized, filterRealized, sumAmounts, roundToCents,
   computeBalance, computeMonthTotals, getDaysLeftInMonth, getDaysInMonth,
 } from './budgetCalculations';
 
@@ -67,6 +67,15 @@ describe('sumAmounts', () => {
     expect(sumAmounts([{ max_amount: '400.00' }, { max_amount: '150.00' }], 'max_amount')).toBe(550);
     expect(sumAmounts([])).toBe(0);
     expect(sumAmounts(null)).toBe(0);
+  });
+});
+
+describe('roundToCents', () => {
+  it('arrondit une saisie au centime', () => {
+    expect(roundToCents('123.456')).toBe(123.46);
+    expect(roundToCents('1380')).toBe(1380);
+    expect(roundToCents('0.1')).toBe(0.1);
+    expect(roundToCents(35.2)).toBe(35.2);
   });
 });
 

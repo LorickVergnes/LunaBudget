@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
-import { useDashboard } from '../../contexts/DashboardContext';
+import { useDashboardFetch } from '../../hooks/useDashboardFetch';
 import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import {
   getMonthStatus, filterRealized, sumAmounts, computeBalance, computeMonthTotals,
@@ -10,16 +10,12 @@ import {
 } from '../../lib/budgetCalculations';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
-import BottomNav from '../../components/layout/BottomNav';
-import DesktopHeader from '../../components/layout/DesktopHeader';
-import DesktopSidebar from '../../components/layout/DesktopSidebar';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import useDesktop from '../../hooks/useDesktop';
 import {
-  CreditCard, Mail, PiggyBank, Info, ChevronRight, AlertTriangle, Wallet,
-  ArrowDownLeft, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Sparkles, Repeat
+  PiggyBank, Info, Wallet, ArrowDownLeft, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Sparkles, Repeat
 } from 'lucide-react';
 import IconBubble from '../../components/ui/IconBubble';
 
@@ -76,90 +72,72 @@ const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
 const Dashboard = () => {
   const { user } = useAuth();
   const { selectedDate, setSelectedDate } = useMonth();
-  const { activeDashboard, loading: dashLoading } = useDashboard();
   const navigate = useNavigate();
   const isDesktop = useDesktop();
-  const [loading, setLoading] = useState(true);
   const [showForecast, setShowForecast] = useState(false);
   const [data, setData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
   const [forecastData, setForecastData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
   const [recentOps, setRecentOps] = useState([]);
   const [envelopesPreview, setEnvelopesPreview] = useState([]);
 
-  const dashboardId = activeDashboard?.id;
+  const load = useCallback(async (dashboardId) => {
+    await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
+    const monthStr = formatMonthDate(selectedDate);
+    const [
+      { data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }
+    ] = await Promise.all([
+      supabase.from('incomes').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+      supabase.from('expenses').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+      supabase.from('envelope_expenses').select('id, amount, date, name, icon, color, envelope_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
+      supabase.from('envelopes').select('id, name, max_amount, icon, color').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+      supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+      supabase.from('saving_entries').select('id, amount, date, savings(name, icon, color)').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
+    ]);
 
-  const fetchData = useCallback(async () => {
-    if (!dashboardId) return;
-    setLoading(true);
-    try {
-      await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
-      const monthStr = formatMonthDate(selectedDate);
-      const [
-        { data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }
-      ] = await Promise.all([
-        supabase.from('incomes').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('expenses').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('envelope_expenses').select('id, amount, date, name, icon, color, envelope_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
-        supabase.from('envelopes').select('id, name, max_amount, icon, color').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
-        supabase.from('saving_entries').select('id, amount, date, savings(name, icon, color)').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
-      ]);
+    const todayStr = getTodayStr();
+    const monthStatus = getMonthStatus(selectedDate);
 
-      const todayStr = getTodayStr();
-      const monthStatus = getMonthStatus(selectedDate);
+    const { real, forecast } = computeMonthTotals(
+      { incomes: inc, expenses: exp, envelopes: envs, envelopeExpenses: envExp, savings: sav, savingEntries: savEntries },
+      monthStatus,
+      todayStr
+    );
+    setForecastData(forecast);
+    setData(real);
 
-      const { real, forecast } = computeMonthTotals(
-        { incomes: inc, expenses: exp, envelopes: envs, envelopeExpenses: envExp, savings: sav, savingEntries: savEntries },
-        monthStatus,
-        todayStr
-      );
-      setForecastData(forecast);
-      setData(real);
+    const recent = [
+      ...(inc || []).map(i => ({ ...i, type: 'income', label: i.name })),
+      ...(exp || []).map(e => ({ ...e, type: 'expense', label: e.name })),
+      ...(envExp || []).map(e => ({ ...e, type: 'expense', label: e.name || 'Dépense' })),
+      ...(savEntries || []).map(s => ({
+        id: s.id,
+        amount: s.amount,
+        date: s.date,
+        label: s.savings?.name || 'Épargne',
+        icon: s.savings?.icon || 'PiggyBank',
+        color: s.savings?.color || '#E5BA73',
+        type: 'expense'
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
-      const recent = [
-        ...(inc || []).map(i => ({ ...i, type: 'income', label: i.name })),
-        ...(exp || []).map(e => ({ ...e, type: 'expense', label: e.name })),
-        ...(envExp || []).map(e => ({ ...e, type: 'expense', label: e.name || 'Dépense' })),
-        ...(savEntries || []).map(s => ({
-          id: s.id,
-          amount: s.amount,
-          date: s.date,
-          label: s.savings?.name || 'Épargne',
-          icon: s.savings?.icon || 'PiggyBank',
-          color: s.savings?.color || '#E5BA73',
-          type: 'expense'
-        }))
-      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+    setRecentOps(recent);
 
-      setRecentOps(recent);
+    const realEnvExp = filterRealized(envExp, monthStatus, todayStr);
+    const envPreview = (envs || []).map(env => {
+      const spent = sumAmounts(realEnvExp.filter(ex => ex.envelope_id === env.id));
+      return {
+        id: env.id,
+        name: env.name,
+        icon: env.icon,
+        color: env.color,
+        target: env.max_amount,
+        spent
+      };
+    });
+    setEnvelopesPreview(envPreview);
+  }, [selectedDate]);
 
-      const realEnvExp = filterRealized(envExp, monthStatus, todayStr);
-      const envPreview = (envs || []).map(env => {
-        const spent = sumAmounts(realEnvExp.filter(ex => ex.envelope_id === env.id));
-        return {
-          id: env.id,
-          name: env.name,
-          icon: env.icon,
-          color: env.color,
-          target: env.max_amount,
-          spent
-        };
-      });
-      setEnvelopesPreview(envPreview);
-
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [dashboardId, selectedDate]);
-
-  useEffect(() => {
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, selectedDate, activeDashboard, dashLoading, fetchData]);
+  const { loading } = useDashboardFetch(load);
 
   const activeData = showForecast ? forecastData : data;
   const balance = computeBalance(activeData);
@@ -378,30 +356,23 @@ const Dashboard = () => {
     })();
 
     return (
-      <div className="desktop-shell fade-in">
-        <DesktopHeader />
-        <div className="desktop-body">
-          <DesktopSidebar />
-          <main className="desktop-main">
-            <div className="desktop-greeting-toprow">
-              <div className="desktop-greeting">
-                <h1>{greeting}</h1>
-                <p>Suivez votre budget, contrôlez vos dépenses et atteignez vos objectifs.</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
-                <div className="desktop-toggle">
-                  <button className={`desktop-toggle-btn${!showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(false)}>Réel</button>
-                  <button className={`desktop-toggle-btn${showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(true)}>Prévisions</button>
-                </div>
-              </div>
+      <>
+        <div className="desktop-greeting-toprow">
+          <div className="desktop-greeting">
+            <h1>{greeting}</h1>
+            <p>Suivez votre budget, contrôlez vos dépenses et atteignez vos objectifs.</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            <div className="desktop-toggle">
+              <button className={`desktop-toggle-btn${!showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(false)}>Réel</button>
+              <button className={`desktop-toggle-btn${showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(true)}>Prévisions</button>
             </div>
-
-            {loading ? <LoadingSpinner /> : dashboardContent()}
-
-          </main>
+          </div>
         </div>
-      </div>
+
+        {loading ? <LoadingSpinner /> : dashboardContent()}
+      </>
     );
   }
 
@@ -423,7 +394,6 @@ const Dashboard = () => {
         {loading ? <LoadingSpinner /> : dashboardContent()}
 
       </div>
-      <BottomNav />
     </div>
   );
 };

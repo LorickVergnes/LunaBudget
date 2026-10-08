@@ -1,264 +1,37 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { useAuth } from '../../hooks/useAuth';
-import { useMonth } from '../../contexts/MonthContext';
-import { useDashboard } from '../../contexts/DashboardContext';
-import { useToast } from '../../contexts/ToastContext';
-import { useRealtimeTable } from '../../hooks/useRealtimeTable';
-import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
-import { ArrowLeft, Plus, Check, Loader2, Trash2, Calendar, Pencil } from 'lucide-react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { getIconComponent } from '../../lib/iconRegistry';
-import BottomNav from '../../components/layout/BottomNav';
-import TopBar from '../../components/layout/TopBar';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import BottomModal from '../../components/ui/BottomModal';
-import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
-import { FormCard, AmountInput } from '../../components/ui/FormUI';
+import React from 'react';
+import EntryDetailPage from './EntryDetailPage';
 
-const SavingDetail = () => {
-  const { user } = useAuth();
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { selectedDate } = useMonth();
-  const { activeDashboard, loading: dashLoading } = useDashboard();
-  const [savingName] = useState(location.state?.name || 'Épargne');
-  const savingIcon = location.state?.icon || 'PiggyBank';
-  const savingColor = location.state?.color || '#F9A825';
-  const HeaderIcon = getIconComponent(savingIcon);
-  const { showToast } = useToast();
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState({ amount: '', date: getTodayStr() });
-
-  const dashboardId = activeDashboard?.id;
-
-  const fetchData = useCallback(async () => {
-    if (!dashboardId) return;
-    setLoading(true);
-    const { data } = await supabase.from('saving_entries').select('*')
-      .eq('saving_id', id)
-      .eq('dashboard_id', dashboardId)
-      .order('date', { ascending: false });
-    setEntries(data || []);
-    setLoading(false);
-  }, [dashboardId, id]);
-
-  useEffect(() => { 
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, id, activeDashboard, dashLoading, fetchData]);
-
-  useRealtimeTable('saving_entries', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
-    const record = newRecord || oldRecord;
-    const currentMonth = formatMonthDate(selectedDate);
-    // On vérifie le mois ET qu'il s'agit bien de la bonne épargne
-    if (record?.month_date && record.month_date !== currentMonth) return;
-    if (record?.saving_id && record.saving_id !== id) return;
-
-    if (newRecord?.user_id === user?.id) {
-      fetchData();
-      return;
-    }
-
-    fetchData();
-
-    const labels = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
-    const name = 'Un versement';
-    showToast(`${name} a été ${labels[eventType] || 'modifié'} par un collaborateur`, { type: 'info', duration: 4000 });
-  }, [selectedDate, id, user?.id, fetchData, showToast]));
-
-  // Écoute de l'objectif parent pour redirection si suppression
-  useRealtimeTable('savings', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
-    if (eventType === 'DELETE' && oldRecord?.id?.toString() === id) {
-      showToast("Cet objectif d'épargne a été supprimé par un collaborateur.", { type: 'error', duration: 5000 });
-      navigate('/savings');
-    }
-  }, [id, navigate, showToast]));
-
-  const handleAdd = async (e) => {
-    e.preventDefault(); setLoading(true);
-    const roundedAmount = Math.round(parseFloat(formData.amount) * 100) / 100;
-    const data = { 
-        ...formData, 
-        amount: roundedAmount, 
-        user_id: user.id, 
-        dashboard_id: activeDashboard.id,
-        saving_id: id, 
-        month_date: formatMonthDate(selectedDate) 
-    };
-    if (editingId) {
-      const { error } = await supabase.from('saving_entries').update(data).eq('id', editingId);
-      if (!error) { showToast('Versement modifié avec succès', { type: 'success' }); setFormData({ amount: '', date: getTodayStr() }); setShowForm(false); setEditingId(null); fetchData(); }
-      else { setLoading(false); showToast(error.message, { type: 'error' }); }
-    } else {
-      const { error } = await supabase.from('saving_entries').insert([data]);
-      if (!error) { showToast('Versement ajouté avec succès', { type: 'success' }); setFormData({ amount: '', date: getTodayStr() }); setShowForm(false); fetchData(); }
-      else { setLoading(false); showToast(error.message, { type: 'error' }); }
-    }
-  };
-
-  const openEdit = (entry) => {
-    setFormData({ amount: entry.amount.toString(), date: entry.date.split('T')[0] });
-    setEditingId(entry.id);
-    setShowForm(true);
-  };
-
-  const del = (id) => {
-    setDeletingId(id);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase.from('saving_entries').delete().eq('id', deletingId);
-      if (error) showToast(error.message, { type: 'error' });
-      else { showToast('Versement supprimé', { type: 'success' }); fetchData(); }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteModal(false);
-      setDeletingId(null);
-    }
-  };
-  const total = entries.reduce((a, c) => a + parseFloat(c.amount), 0);
-
-  return (
-    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: 'transparent' }}>
-      <TopBar title={savingName} />
-
-      {/* Sub-header for Saving Context */}
-      <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => navigate(-1)} style={{ background: '#ffffff', border: '1px solid #E8ECFF', cursor: 'pointer', display: 'flex', padding: '8px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <ArrowLeft size={20} style={{ color: '#4A6984' }} />
-        </button>
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 13, color: '#B0B8C9', fontWeight: 600, lineHeight: 1 }}>Versements</p>
-        </div>
-        <span style={{ fontSize: 16, fontWeight: 800, color: '#22c55e', background: '#22c55e15', padding: '6px 12px', borderRadius: '12px' }}>
-          +{total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-        </span>
-      </div>
-
-      <div style={{ padding: '0px 16px', maxWidth: 480, margin: '0 auto' }}>
-        {loading && !showForm ? (
-          <LoadingSpinner color="#F9A825" />
-        ) : entries.length === 0 ? (
-          <div className="card" style={{ padding: '60px 20px', textAlign: 'center', marginTop: 16 }}>
-            <HeaderIcon size={40} style={{ color: '#D1D5DB', margin: '0 auto 12px' }} />
-            <p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucun versement pour cet objectif.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {entries.map((entry, i) => (
-              <div key={entry.id} className="card fade-up" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, animationDelay: `${i * 40}ms` }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: `${savingColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <HeaderIcon size={20} style={{ color: savingColor }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: '#4A6984', marginBottom: 2 }}>Versement</p>
-                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
-                    {parseFloat(entry.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {parseLocalDate(entry.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button 
-                    onClick={() => openEdit(entry)} 
-                    style={{ 
-                      background: '#F3F4F6', border: 'none', borderRadius: 10, width: 36, height: 36,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                    }}
-                  >
-                    <Pencil size={18} style={{ color: '#6B7280' }} />
-                  </button>
-                  <button 
-                    onClick={() => del(entry.id)} 
-                    style={{ 
-                      background: '#FEE2E2', border: 'none', borderRadius: 10, width: 36, height: 36,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                    }}
-                  >
-                    <Trash2 size={18} style={{ color: '#EF4444' }} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {!showForm && (
-        <button onClick={() => {
-          setFormData({ amount: '', date: getTodayStr() });
-          setEditingId(null);
-          setShowForm(true);
-        }}
-          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
-          <Plus size={26} color="white" />
-        </button>
-      )}
-
-      {/* Modal Form */}
-      <BottomModal isOpen={showForm} onClose={() => setShowForm(false)} title={editingId ? "Modifier le versement" : "Ajouter un versement"}>
-        <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          
-          <AmountInput 
-            value={formData.amount} 
-            onChange={e => setFormData({ ...formData, amount: e.target.value })}
-            color="#9CA3AF"
-          />
-
-          <FormCard style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Calendar size={22} style={{ color: '#9CA3AF' }} />
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 2 }}>Date</label>
-              <input 
-                type="date" 
-                required
-                value={formData.date} 
-                onChange={e => setFormData({ ...formData, date: e.target.value })}
-                style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} 
-              />
-            </div>
-          </FormCard>
-
-          <button type="submit" disabled={loading}
-            style={{ 
-              background: '#3B82F6', color: 'white', border: 'none', borderRadius: 16, 
-              padding: '16px', fontSize: 16, fontWeight: 600, cursor: 'pointer', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              boxShadow: '0 4px 14px rgba(59,130,246,0.3)', marginTop: 8 
-            }}
-          >
-            {loading ? <Loader2 size={24} className="animate-spin-smooth" /> : editingId ? 'Enregistrer' : 'Confirmer le versement'}
-          </button>
-        </form>
-      </BottomModal>
-
-      <DeleteConfirmationModal 
-        isOpen={showDeleteModal} 
-        onClose={() => setShowDeleteModal(false)} 
-        onConfirm={confirmDelete}
-        loading={isDeleting}
-        title="Supprimer ce versement ?"
-        message="Voulez-vous vraiment supprimer ce versement de votre épargne ? Cette action est définitive."
-      />
-
-      <BottomNav />
-    </div>
-  );
+const CONFIG = {
+  table: 'saving_entries',
+  parentTable: 'savings',
+  parentKey: 'saving_id',
+  parentRoute: '/savings',
+  defaultName: 'Épargne',
+  defaultIcon: 'PiggyBank',
+  defaultColor: '#F9A825',
+  spinnerColor: '#F9A825',
+  totalColor: '#22c55e',
+  totalPrefix: '+',
+  hasName: false,
+  extraRow: {},
+  texts: {
+    headerLabel: 'Versements',
+    empty: 'Aucun versement pour cet objectif.',
+    entryTitle: 'Versement',
+    addTitle: 'Ajouter un versement',
+    editTitle: 'Modifier le versement',
+    submitLabel: 'Confirmer le versement',
+    deleteTitle: 'Supprimer ce versement ?',
+    deleteMessage: 'Voulez-vous vraiment supprimer ce versement de votre épargne ? Cette action est définitive.',
+    created: 'Versement ajouté avec succès',
+    updated: 'Versement modifié avec succès',
+    deleted: 'Versement supprimé',
+    parentDeleted: "Cet objectif d'épargne a été supprimé par un collaborateur.",
+    realtimeMessage: (_name, verb) => `Un versement a été ${verb} par un collaborateur`,
+    feminine: false,
+  },
 };
+
+const SavingDetail = () => <EntryDetailPage config={CONFIG} />;
+
 export default SavingDetail;

@@ -1,279 +1,37 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { useAuth } from '../../hooks/useAuth';
-import { useDashboard } from '../../contexts/DashboardContext';
-import { useMonth } from '../../contexts/MonthContext';
-import { useToast } from '../../contexts/ToastContext';
-import { useRealtimeTable } from '../../hooks/useRealtimeTable';
-import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
-import { ArrowLeft, Plus, Check, Loader2, Trash2, Calendar, Pencil, ShoppingCart } from 'lucide-react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { getIconComponent } from '../../lib/iconRegistry';
-import BottomNav from '../../components/layout/BottomNav';
-import TopBar from '../../components/layout/TopBar';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import BottomModal from '../../components/ui/BottomModal';
-import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
-import { FormCard, AmountInput } from '../../components/ui/FormUI';
+import React from 'react';
+import EntryDetailPage from './EntryDetailPage';
 
-const EnvelopeDetail = () => {
-  const { user } = useAuth();
-  const { activeDashboard, loading: dashLoading } = useDashboard();
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { selectedDate } = useMonth();
-  const [envelopeName] = useState(location.state?.name || 'Enveloppe');
-  const envelopeIcon = location.state?.icon || 'Wallet';
-  const envelopeColor = location.state?.color || '#A0D2EB';
-  const HeaderIcon = getIconComponent(envelopeIcon);
-  const { showToast } = useToast();
-  const [expenses, setExpenses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState({ name: '', amount: '', date: getTodayStr() });
-
-  const dashboardId = activeDashboard?.id;
-
-  const fetchData = useCallback(async () => {
-    if (!dashboardId) return;
-    setLoading(true);
-    const { data } = await supabase.from('envelope_expenses').select('*')
-      .eq('envelope_id', id)
-      .eq('dashboard_id', dashboardId)
-      .order('date', { ascending: false });
-    setExpenses(data || []);
-    setLoading(false);
-  }, [dashboardId, id]);
-
-  useEffect(() => { 
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, activeDashboard, id, dashLoading, fetchData]);
-
-  useRealtimeTable('envelope_expenses', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
-    const record = newRecord || oldRecord;
-    const currentMonth = formatMonthDate(selectedDate);
-    // On vérifie le mois ET qu'il s'agit bien de la bonne enveloppe
-    if (record?.month_date && record.month_date !== currentMonth) return;
-    if (record?.envelope_id && record.envelope_id !== id) return;
-
-    if (newRecord?.user_id === user?.id) {
-      fetchData();
-      return;
-    }
-
-    fetchData();
-
-    const labels = { INSERT: 'ajoutée', UPDATE: 'modifiée', DELETE: 'supprimée' };
-    const name = newRecord?.name || oldRecord?.name || 'Une dépense';
-    showToast(`${name} a été ${labels[eventType] || 'modifiée'} par un collaborateur`, { type: 'info', duration: 4000 });
-  }, [selectedDate, id, user?.id, fetchData, showToast]));
-
-  // Écoute de l'enveloppe parente pour redirection si suppression
-  useRealtimeTable('envelopes', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
-    if (eventType === 'DELETE' && oldRecord?.id?.toString() === id) {
-      showToast("Cette enveloppe a été supprimée par un collaborateur.", { type: 'error', duration: 5000 });
-      navigate('/envelopes');
-    }
-  }, [id, navigate, showToast]));
-
-  const handleAdd = async (e) => {
-    e.preventDefault(); setLoading(true);
-    // Arrondi explicite à 2 décimales
-    const roundedAmount = Math.round(parseFloat(formData.amount) * 100) / 100;
-    const data = { 
-      ...formData, 
-      amount: roundedAmount, 
-      user_id: user.id, 
-      dashboard_id: activeDashboard.id,
-      envelope_id: id, 
-      month_date: formatMonthDate(selectedDate), 
-      icon: 'ShoppingCart', 
-      color: '#A0D2EB' 
-    };
-    if (editingId) {
-      const { error } = await supabase.from('envelope_expenses').update(data).eq('id', editingId);
-      if (!error) { showToast('Dépense modifiée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: getTodayStr() }); setShowForm(false); setEditingId(null); fetchData(); }
-      else { setLoading(false); showToast(error.message, { type: 'error' }); }
-    } else {
-      const { error } = await supabase.from('envelope_expenses').insert([data]);
-      if (!error) { showToast('Dépense ajoutée avec succès', { type: 'success' }); setFormData({ name: '', amount: '', date: getTodayStr() }); setShowForm(false); fetchData(); }
-      else { setLoading(false); showToast(error.message, { type: 'error' }); }
-    }
-  };
-
-  const openEdit = (exp) => {
-    setFormData({ name: exp.name, amount: exp.amount.toString(), date: exp.date.split('T')[0] });
-    setEditingId(exp.id);
-    setShowForm(true);
-  };
-
-  const del = (id) => {
-    setDeletingId(id);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase.from('envelope_expenses').delete().eq('id', deletingId);
-      if (error) showToast(error.message, { type: 'error' });
-      else { showToast('Dépense supprimée', { type: 'success' }); fetchData(); }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteModal(false);
-      setDeletingId(null);
-    }
-  };
-  const total = expenses.reduce((a, c) => a + parseFloat(c.amount), 0);
-
-  return (
-    <div className="fade-in pb-fab-spacer" style={{ minHeight: '100vh', background: 'transparent' }}>
-      <TopBar title={envelopeName} />
-      
-      {/* Sub-header for Envelope Context */}
-      <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => navigate(-1)} style={{ background: '#ffffff', border: '1px solid #E8ECFF', cursor: 'pointer', display: 'flex', padding: '8px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <ArrowLeft size={20} style={{ color: '#4A6984' }} />
-        </button>
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 13, color: '#B0B8C9', fontWeight: 600, lineHeight: 1 }}>Détail Enveloppe</p>
-        </div>
-        <span style={{ fontSize: 16, fontWeight: 800, color: '#A0D2EB', background: '#A0D2EB15', padding: '6px 12px', borderRadius: '12px' }}>
-          {total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-        </span>
-      </div>
-
-      <div style={{ padding: '0px 16px', maxWidth: 480, margin: '0 auto' }}>
-        {loading && !showForm ? (
-          <LoadingSpinner color="#A0D2EB" />
-        ) : expenses.length === 0 ? (
-          <div className="card" style={{ padding: '60px 20px', textAlign: 'center', marginTop: 16 }}>
-            <HeaderIcon size={40} style={{ color: '#D1D5DB', margin: '0 auto 12px' }} />
-            <p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucune dépense dans cette enveloppe.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {expenses.map((exp, i) => (
-              <div key={exp.id} className="card fade-up" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, animationDelay: `${i * 40}ms` }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: `${envelopeColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <HeaderIcon size={20} style={{ color: envelopeColor }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: '#4A6984', marginBottom: 2 }}>{exp.name}</p>
-                  <p style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 500 }}>
-                    {parseFloat(exp.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € – {parseLocalDate(exp.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button 
-                    onClick={() => openEdit(exp)} 
-                    style={{ 
-                      background: '#F3F4F6', border: 'none', borderRadius: 10, width: 36, height: 36,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                    }}
-                  >
-                    <Pencil size={18} style={{ color: '#6B7280' }} />
-                  </button>
-                  <button 
-                    onClick={() => del(exp.id)} 
-                    style={{ 
-                      background: '#FEE2E2', border: 'none', borderRadius: 10, width: 36, height: 36,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                    }}
-                  >
-                    <Trash2 size={18} style={{ color: '#EF4444' }} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {!showForm && (
-        <button onClick={() => {
-          setFormData({ name: '', amount: '', date: getTodayStr() });
-          setEditingId(null);
-          setShowForm(true);
-        }}
-          style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
-          <Plus size={26} color="white" />
-        </button>
-      )}
-
-      {/* Modal Form */}
-      <BottomModal isOpen={showForm} onClose={() => setShowForm(false)} title={editingId ? "Modifier la dépense" : "Ajouter une dépense"}>
-        <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          
-          <AmountInput 
-            value={formData.amount} 
-            onChange={e => setFormData({ ...formData, amount: e.target.value })}
-            color="#9CA3AF"
-          />
-
-          <FormCard>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Nom</label>
-            <input 
-              type="text" 
-              required 
-              placeholder="Ex: Courses, Cinéma..." 
-              value={formData.name} 
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} 
-            />
-          </FormCard>
-
-          <FormCard style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Calendar size={22} style={{ color: '#9CA3AF' }} />
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 2 }}>Date</label>
-              <input 
-                type="date" 
-                required
-                value={formData.date} 
-                onChange={e => setFormData({ ...formData, date: e.target.value })}
-                style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} 
-              />
-            </div>
-          </FormCard>
-
-          <button type="submit" disabled={loading}
-            style={{ 
-              background: '#3B82F6', color: 'white', border: 'none', borderRadius: 16, 
-              padding: '16px', fontSize: 16, fontWeight: 600, cursor: 'pointer', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              boxShadow: '0 4px 14px rgba(59,130,246,0.3)', marginTop: 8 
-            }}
-          >
-            {loading ? <Loader2 size={24} className="animate-spin-smooth" /> : editingId ? 'Enregistrer' : 'Ajouter'}
-          </button>
-        </form>
-      </BottomModal>
-
-      <DeleteConfirmationModal 
-        isOpen={showDeleteModal} 
-        onClose={() => setShowDeleteModal(false)} 
-        onConfirm={confirmDelete}
-        loading={isDeleting}
-        title="Supprimer cette dépense ?"
-        message="Voulez-vous vraiment supprimer cette dépense de l'enveloppe ? Cette action est définitive."
-      />
-
-      <BottomNav />
-    </div>
-  );
+const CONFIG = {
+  table: 'envelope_expenses',
+  parentTable: 'envelopes',
+  parentKey: 'envelope_id',
+  parentRoute: '/envelopes',
+  defaultName: 'Enveloppe',
+  defaultIcon: 'Wallet',
+  defaultColor: '#A0D2EB',
+  spinnerColor: '#A0D2EB',
+  totalColor: '#A0D2EB',
+  totalPrefix: '',
+  hasName: true,
+  extraRow: { icon: 'ShoppingCart', color: '#A0D2EB' },
+  texts: {
+    headerLabel: 'Détail Enveloppe',
+    empty: 'Aucune dépense dans cette enveloppe.',
+    addTitle: 'Ajouter une dépense',
+    editTitle: 'Modifier la dépense',
+    namePlaceholder: 'Ex: Courses, Cinéma...',
+    submitLabel: 'Ajouter',
+    deleteTitle: 'Supprimer cette dépense ?',
+    deleteMessage: "Voulez-vous vraiment supprimer cette dépense de l'enveloppe ? Cette action est définitive.",
+    created: 'Dépense ajoutée avec succès',
+    updated: 'Dépense modifiée avec succès',
+    deleted: 'Dépense supprimée',
+    parentDeleted: 'Cette enveloppe a été supprimée par un collaborateur.',
+    realtimeMessage: (name, verb) => `${name || 'Une dépense'} a été ${verb} par un collaborateur`,
+    feminine: true,
+  },
 };
+
+const EnvelopeDetail = () => <EntryDetailPage config={CONFIG} />;
+
 export default EnvelopeDetail;

@@ -1,24 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
-import { useDashboard } from '../../contexts/DashboardContext';
-import { useToast } from '../../contexts/ToastContext';
-import { useRealtimeTable } from '../../hooks/useRealtimeTable';
+import { useDashboardFetch } from '../../hooks/useDashboardFetch';
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
 import { formatMonthDate, getTodayStr } from '../../lib/dateUtils';
-import { getMonthStatus, filterRealized, sumAmounts } from '../../lib/budgetCalculations';
-import { Plus, Check, Loader2, Trash2, Pencil, Zap } from 'lucide-react';
+import { getMonthStatus, filterRealized, sumAmounts, roundToCents } from '../../lib/budgetCalculations';
+import { formatEuro as fmt } from '../../lib/format';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
-import BottomNav from '../../components/layout/BottomNav';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
-import DesktopHeader from '../../components/layout/DesktopHeader';
-import DesktopSidebar from '../../components/layout/DesktopSidebar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
-import { FormCard, AmountInput } from '../../components/ui/FormUI';
+import { FormCard, AmountInput, TextField, CheckboxCard, SubmitButton } from '../../components/ui/FormUI';
+import { ProgressLinear, SingleDonut } from '../../components/ui/Gauges';
 import IconSelector from '../../components/ui/IconSelector';
 import IconBubble from '../../components/ui/IconBubble';
 import ColorPicker from '../../components/ui/ColorPicker';
@@ -26,229 +24,93 @@ import useDesktop from '../../hooks/useDesktop';
 
 const ACCENT = '#A0D2EB';
 
-const fmt = (num) => num.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
-
-const ProgressLinear = ({ value, max, color, height = 6 }) => {
-  const pct = Math.min((value / Math.max(max, 1)) * 100, 100);
-  return (
-    <div style={{ height, borderRadius: 99, background: 'transparent', overflow: 'hidden' }}>
-      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: color, transition: 'width .7s ease' }} />
-    </div>
-  );
-};
-
-const SingleDonut = ({ value, max, size = 90, stroke = 10, color = ACCENT, trackColor = '#F4F7F6', label, sublabel }) => {
-  const pct = Math.min(value / Math.max(max, 1), 1);
-  const r = (size - stroke) / 2;
-  const cx = size / 2, cy = size / 2;
-  const circ = 2 * Math.PI * r;
-  const dashLength = Math.max(0, pct * circ);
-  
-  return (
-    <div style={{ position: 'relative', width: size, height: size, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={stroke} stroke={trackColor} />
-        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={stroke} stroke={color} strokeDasharray={`${dashLength} ${circ}`} strokeLinecap="round" style={{ transition: 'stroke-dasharray 0.7s ease' }} />
-      </svg>
-      {(label || sublabel) && (
-        <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
-          {label && <span style={{ fontSize: size * 0.2, fontWeight: 900, color: '#4A6984', display: 'block' }}>{label}</span>}
-          {sublabel && <span style={{ fontSize: size * 0.09, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>{sublabel}</span>}
-        </div>
-      )}
-    </div>
-  );
-};
-
 const Savings = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useMonth();
-  const { activeDashboard, loading: dashLoading } = useDashboard();
   const isDesktop = useDesktop();
-  const { showToast } = useToast();
   const [savings, setSavings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deletingItem, setDeletingItem] = useState(null);
-  const [formData, setFormData] = useState({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' });
 
-  const dashboardId = activeDashboard?.id;
+  const load = useCallback(async (dashboardId) => {
+    await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
+    const { data: savs } = await supabase.from('savings')
+      .select('*, saving_entries(amount, date)')
+      .eq('dashboard_id', dashboardId)
+      .eq('month_date', formatMonthDate(selectedDate))
+      .eq('is_hidden', false);
 
-  const fetchData = useCallback(async () => {
-    if (!dashboardId) return;
-    setLoading(true);
-    try {
-      await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
-      const { data: savs } = await supabase.from('savings')
-        .select('*, saving_entries(amount, date)')
-        .eq('dashboard_id', dashboardId)
-        .eq('month_date', formatMonthDate(selectedDate))
-        .eq('is_hidden', false);
+    const todayStr = getTodayStr();
+    const monthStatus = getMonthStatus(selectedDate);
 
-      const todayStr = getTodayStr();
-      const monthStatus = getMonthStatus(selectedDate);
+    setSavings((savs || []).map(s => ({
+      ...s,
+      currentReal: sumAmounts(filterRealized(s.saving_entries, monthStatus, todayStr))
+    })));
+  }, [selectedDate]);
 
-      setSavings((savs || []).map(s => ({
-        ...s,
-        currentReal: sumAmounts(filterRealized(s.saving_entries, monthStatus, todayStr))
-      })));
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  }, [dashboardId, selectedDate]);
+  const { loading, setLoading, refresh } = useDashboardFetch(load);
 
-  useEffect(() => { 
-    if (user) {
-      if (activeDashboard) {
-        fetchData();
-      } else if (!dashLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, selectedDate, activeDashboard, dashLoading, fetchData]);
-
-  useRealtimeTable('savings', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
-    const record = newRecord || oldRecord;
-    const currentMonth = formatMonthDate(selectedDate);
-    if (record?.month_date && record.month_date !== currentMonth) return;
-
-    if (newRecord?.user_id === user?.id) {
-      fetchData();
-      return;
-    }
-
-    fetchData();
-
-    const labels = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
-    const name = newRecord?.name || oldRecord?.name || "Un objectif d'épargne";
-    showToast(`${name} a été ${labels[eventType] || 'modifié'} par un collaborateur`, { type: 'info', duration: 4000 });
-  }, [selectedDate, user?.id, fetchData, showToast]));
+  useRealtimeSync('savings', {
+    onChange: refresh,
+    message: (name, verb) => `${name || "Un objectif d'épargne"} a été ${verb} par un collaborateur`,
+  });
 
   // On écoute aussi les versements pour mettre à jour la jauge de l'épargne parente
-  useRealtimeTable('saving_entries', activeDashboard?.id, useCallback((eventType, newRecord, oldRecord) => {
-    const record = newRecord || oldRecord;
-    const currentMonth = formatMonthDate(selectedDate);
-    if (record?.month_date && record.month_date !== currentMonth) return;
+  useRealtimeSync('saving_entries', {
+    onChange: refresh,
+    message: (_name, verb) => `Un versement a été ${verb} sur un objectif`,
+  });
 
-    if (newRecord?.user_id === user?.id) {
-      fetchData();
-      return;
-    }
+  const form = useCrudForm({
+    table: 'savings',
+    emptyForm: () => ({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' }),
+    toForm: (s) => ({ name: s.name, target_amount: s.target_amount.toString(), icon: s.icon || 'PiggyBank', color: s.color || '#F9A825', is_recurrent: s.is_recurrent, max_month: s.max_month ? s.max_month.substring(0, 7) : '' }),
+    toRow: (formData) => ({
+      ...formData,
+      target_amount: roundToCents(formData.target_amount),
+      month_date: formatMonthDate(selectedDate),
+      // La date de fin ne vaut que pour un objectif récurrent ; le champ donne "AAAA-MM"
+      max_month: formData.is_recurrent && formData.max_month ? `${formData.max_month}-01` : null,
+    }),
+    messages: { created: 'Objectif créé avec succès', updated: 'Objectif modifié avec succès' },
+    refresh,
+    setLoading,
+  });
+  const { formData, setField } = form;
 
-    fetchData();
-
-    const labels = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
-    showToast(`Un versement a été ${labels[eventType] || 'modifié'} sur un objectif`, { type: 'info', duration: 4000 });
-  }, [selectedDate, user?.id, fetchData, showToast]));
-
-  const handleAdd = async (e) => {
-    e.preventDefault(); setLoading(true);
-    const roundedAmount = Math.round(parseFloat(formData.target_amount) * 100) / 100;
-    const data = { 
-        ...formData, 
-        target_amount: roundedAmount, 
-        user_id: user.id, 
-        dashboard_id: activeDashboard.id,
-        month_date: formatMonthDate(selectedDate) 
-    };
-    if (data.is_recurrent && data.max_month) { data.max_month = `${data.max_month}-01`; } else { data.max_month = null; }
-    if (editingId) {
-      const { error } = await supabase.from('savings').update(data).eq('id', editingId);
-      if (!error) { showToast('Objectif modifié avec succès', { type: 'success' }); resetForm(); fetchData(); } else { setLoading(false); showToast(error.message, { type: 'error' }); }
-    } else {
-      const { error } = await supabase.from('savings').insert([data]);
-      if (!error) { showToast('Objectif créé avec succès', { type: 'success' }); resetForm(); fetchData(); } else { setLoading(false); showToast(error.message, { type: 'error' }); }
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' });
-    setShowForm(false);
-    setEditingId(null);
-  };
-
-  const openEdit = (e, s) => {
-    e.stopPropagation();
-    const parsedMaxMonth = s.max_month ? s.max_month.substring(0, 7) : '';
-    setFormData({ name: s.name, target_amount: s.target_amount.toString(), icon: s.icon || 'PiggyBank', color: s.color || '#F9A825', is_recurrent: s.is_recurrent, max_month: parsedMaxMonth });
-    setEditingId(s.id);
-    setShowForm(true);
-  };
-
-  const del = (e, s) => {
-    e.stopPropagation();
-    setDeletingId(s.id);
-    setDeletingItem(s);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase.from('savings').delete().eq('id', deletingId);
-      if (error) showToast(error.message, { type: 'error' }); else { showToast('Objectif supprimé', { type: 'success' }); fetchData(); }
-    } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
-  };
-
-  const confirmHideOnly = async () => {
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase.from('savings').update({ is_hidden: true }).eq('id', deletingId);
-      if (error) showToast(error.message, { type: 'error' }); else { showToast('Objectif masqué pour ce mois', { type: 'success' }); fetchData(); }
-    } finally { setIsDeleting(false); setShowDeleteModal(false); setDeletingId(null); setDeletingItem(null); }
-  };
+  const deletion = useDeleteFlow({
+    table: 'savings',
+    messages: { deleted: 'Objectif supprimé', hidden: 'Objectif masqué pour ce mois' },
+    refresh,
+  });
 
   const totalTarget = sumAmounts(savings, 'target_amount');
   const totalSaved = sumAmounts(savings, 'currentReal');
 
   const modalForm = (
-    <BottomModal isOpen={showForm} onClose={resetForm} title={editingId ? "Modifier l'objectif" : "Nouvel objectif"}>
-      <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <AmountInput value={formData.target_amount} onChange={e => setFormData({ ...formData, target_amount: e.target.value })} color="#9CA3AF" />
-        <FormCard>
-          <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Nom</label>
-          <input type="text" required placeholder="Voyage, Voiture, Urgences..." value={formData.name}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
-            style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} />
-        </FormCard>
-        <FormCard style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setFormData({ ...formData, is_recurrent: !formData.is_recurrent })}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Objectif récurrent</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 20, height: 20, borderRadius: 6, border: formData.is_recurrent ? 'none' : '2px solid #D1D5DB', background: formData.is_recurrent ? '#3B82F6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {formData.is_recurrent && <Check size={14} color="white" />}
-              </div>
-              <span style={{ fontSize: 15, color: '#4B5563' }}>Créer chaque mois</span>
-            </div>
-          </div>
-        </FormCard>
+    <BottomModal isOpen={form.showForm} onClose={form.resetForm} title={form.editingId ? "Modifier l'objectif" : "Nouvel objectif"}>
+      <form onSubmit={form.submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <AmountInput value={formData.target_amount} onChange={e => setField('target_amount', e.target.value)} color="#9CA3AF" />
+        <TextField label="Nom" placeholder="Voyage, Voiture, Urgences..." value={formData.name} onChange={e => setField('name', e.target.value)} />
+        <CheckboxCard label="Objectif récurrent" text="Créer chaque mois" checked={formData.is_recurrent} onToggle={() => setField('is_recurrent', !formData.is_recurrent)} />
         {formData.is_recurrent && (
           <FormCard>
             <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Date de fin (Optionnel)</label>
             <span style={{ fontSize: 12, color: '#9CA3AF', display: 'block', marginBottom: 8 }}>Mois et année finaux d'application pour cet objectif.</span>
-            <input type="month" value={formData.max_month} onChange={e => setFormData({ ...formData, max_month: e.target.value })}
+            <input type="month" value={formData.max_month} onChange={e => setField('max_month', e.target.value)}
               style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} />
           </FormCard>
         )}
-        <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setFormData({ ...formData, icon: val })} /></FormCard>
-        <FormCard><ColorPicker value={formData.color} onChange={c => setFormData({ ...formData, color: c })} /></FormCard>
-        <button type="submit" disabled={loading}
-          style={{ background: '#3B82F6', color: 'white', border: 'none', borderRadius: 16, padding: '16px', fontSize: 16, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(59,130,246,0.3)', marginTop: 8 }}>
-          {loading ? <Loader2 size={24} className="animate-spin-smooth" /> : editingId ? 'Enregistrer' : "Créer l'objectif"}
-        </button>
+        <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
+        <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
+        <SubmitButton loading={loading}>{form.editingId ? 'Enregistrer' : "Créer l'objectif"}</SubmitButton>
       </form>
     </BottomModal>
   );
 
   const deleteModal = (
-    <DeleteConfirmationModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}
-      onConfirm={confirmDelete} onConfirmAlternative={confirmHideOnly}
-      loading={isDeleting} isRecurrent={deletingItem?.is_recurrent}
-      title={deletingItem?.is_recurrent ? "Objectif récurrent" : "Supprimer cet objectif ?"}
-      message={deletingItem?.is_recurrent
+    <DeleteConfirmationModal {...deletion.modalProps}
+      title={deletion.target?.is_recurrent ? "Objectif récurrent" : "Supprimer cet objectif ?"}
+      message={deletion.target?.is_recurrent
         ? "Cet objectif est récurrent. Voulez-vous le supprimer définitivement ou seulement pour ce mois-ci ?"
         : "Voulez-vous vraiment supprimer cet objectif d'épargne ? Toutes les entrées liées seront également supprimées."} />
   );
@@ -307,7 +169,7 @@ const Savings = () => {
               <Plus size={14} /> Alimenter
             </button>
             <button
-              onClick={(e) => openEdit(e, s)}
+              onClick={(ev) => { ev.stopPropagation(); form.openEdit(s); }}
               style={{
                 padding: '10px 14px', borderRadius: 12,
                 background: '#F5F7FF', color: '#A0D2EB',
@@ -317,7 +179,7 @@ const Savings = () => {
               <Pencil size={14} />
             </button>
             <button
-              onClick={(e) => del(e, s)}
+              onClick={(ev) => { ev.stopPropagation(); deletion.askDelete(s); }}
               style={{
                 padding: '10px 14px', borderRadius: 12,
                 background: '#FEECEC', color: '#DC2626',
@@ -373,7 +235,7 @@ const Savings = () => {
             <Plus size={14} /> Alimenter
           </button>
           <button
-            onClick={(e) => openEdit(e, s)}
+            onClick={(ev) => { ev.stopPropagation(); form.openEdit(s); }}
             style={{
               padding: '9px 14px', borderRadius: 11,
               background: '#F5F7FF', color: '#A0D2EB',
@@ -383,7 +245,7 @@ const Savings = () => {
             <Pencil size={14} />
           </button>
           <button
-            onClick={(e) => del(e, s)}
+            onClick={(ev) => { ev.stopPropagation(); deletion.askDelete(s); }}
             style={{
               padding: '9px 14px', borderRadius: 11,
               background: '#FEECEC', color: '#DC2626',
@@ -400,57 +262,51 @@ const Savings = () => {
   // ── DESKTOP ──
   if (isDesktop) {
     return (
-      <div className="desktop-shell fade-in">
-        <DesktopHeader />
-        <div className="desktop-body">
-          <DesktopSidebar />
-          <main className="desktop-main">
-            <div className="desktop-greeting-toprow">
-              <div className="desktop-greeting">
-                <h1>Épargne 🐖</h1>
-                <p>Suivez vos objectifs d'épargne et vos versements.</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
-                <button onClick={() => { resetForm(); setShowForm(true); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9A825', color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(249,168,37,0.35)' }}>
-                  <Plus size={18} /> Nouvel objectif
-                </button>
+      <>
+        <div className="desktop-greeting-toprow">
+          <div className="desktop-greeting">
+            <h1>Épargne 🐖</h1>
+            <p>Suivez vos objectifs d'épargne et vos versements.</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            <button onClick={form.openCreate}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9A825', color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(249,168,37,0.35)' }}>
+              <Plus size={18} /> Nouvel objectif
+            </button>
+          </div>
+        </div>
+
+        {loading && !form.showForm ? <LoadingSpinner color="#F9A825" /> : (
+          <div>
+            <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: 12, opacity: .9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Patrimoine épargné
+                  </div>
+                  <div style={{ fontSize: 36, fontWeight: 900, marginTop: 4 }}>{fmt(totalSaved)}</div>
+                  <div style={{ fontSize: 14, opacity: .9, fontWeight: 600, marginTop: 4 }}>
+                    Objectif total : {fmt(totalTarget)}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {loading && !showForm ? <LoadingSpinner color="#F9A825" /> : (
-              <div>
-                <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: 12, opacity: .9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                        Patrimoine épargné
-                      </div>
-                      <div style={{ fontSize: 36, fontWeight: 900, marginTop: 4 }}>{fmt(totalSaved)}</div>
-                      <div style={{ fontSize: 14, opacity: .9, fontWeight: 600, marginTop: 4 }}>
-                        Objectif total : {fmt(totalTarget)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {savings.length === 0 ? (
-                  <div className="desktop-budget-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                    <p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucun objectif. Préparez l'avenir !</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-                    {savings.map((s, i) => <SavingCard key={s.id} s={s} i={i} />)}
-                  </div>
-                )}
+            {savings.length === 0 ? (
+              <div className="desktop-budget-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <p style={{ color: '#B0B8C9', fontWeight: 600 }}>Aucun objectif. Préparez l'avenir !</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+                {savings.map((s, i) => <SavingCard key={s.id} s={s} i={i} />)}
               </div>
             )}
-          </main>
-        </div>
+          </div>
+        )}
         {modalForm}
         {deleteModal}
-      </div>
+      </>
     );
   }
 
@@ -463,7 +319,7 @@ const Savings = () => {
           <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
 
-        {loading && !showForm ? <LoadingSpinner color="#F9A825" /> : (
+        {loading && !form.showForm ? <LoadingSpinner color="#F9A825" /> : (
           <>
             <div className="fade-up" style={{ padding: 20, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 18, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <div style={{ fontSize: 11, opacity: .9, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5 }}>
@@ -484,15 +340,14 @@ const Savings = () => {
           </>
         )}
       </div>
-      {!showForm && (
-        <button onClick={() => { resetForm(); setShowForm(true); }}
+      {!form.showForm && (
+        <button onClick={form.openCreate}
           style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#F9A825', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(249,168,37,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />
         </button>
       )}
       {modalForm}
       {deleteModal}
-      <BottomNav />
     </div>
   );
 };

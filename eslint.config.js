@@ -32,6 +32,11 @@ export default defineConfig([
     },
   },
   {
+    // Les tests tournent dans Node (process.env) avec un DOM simulé
+    files: ['src/test/**', '**/*.test.{js,jsx}'],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+  },
+  {
     files: ['public/sw.js'],
     languageOptions: { globals: globals.serviceworker },
   },

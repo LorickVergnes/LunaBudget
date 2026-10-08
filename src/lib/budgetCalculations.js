@@ -31,6 +31,9 @@ export const filterRealized = (items, monthStatus, todayStr) =>
 export const sumAmounts = (items, key = 'amount') =>
   (items || []).reduce((cents, item) => cents + Math.round(parseFloat(item[key]) * 100), 0) / 100;
 
+// Montant saisi dans un formulaire, arrondi au centime
+export const roundToCents = (value) => Math.round(parseFloat(value) * 100) / 100;
+
 // Reste à vivre = revenus - dépenses fixes - enveloppes - épargne
 export const computeBalance = ({ income, fixedExp, envExp, savings }) =>
   income - (fixedExp + envExp) - savings;

@@ -12,6 +12,7 @@ import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import { useAuth } from './hooks/useAuth';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import AppLayout from './components/layout/AppLayout';
 import { MonthProvider } from './contexts/MonthContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { DashboardProvider } from './contexts/DashboardContext';
@@ -20,7 +21,7 @@ import AmbientOrbs from './components/ui/AmbientOrbs';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return <LoadingSpinner fullHeight color="#6366f1" />;
   }
@@ -41,26 +42,33 @@ function App() {
             <AmbientOrbs />
             <Router>
               <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
 
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/incomes" element={<ProtectedRoute><Incomes /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-              <Route path="/envelopes" element={<ProtectedRoute><Envelopes /></ProtectedRoute>} />
-              <Route path="/envelopes/:id" element={<ProtectedRoute><EnvelopeDetail /></ProtectedRoute>} />
-              <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
-              <Route path="/savings/:id" element={<ProtectedRoute><SavingDetail /></ProtectedRoute>} />
-              <Route path="/global" element={<ProtectedRoute><GlobalView /></ProtectedRoute>} />
-              <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+                {/* Pages connectées : le cadre (en-tête, navigation) est porté par AppLayout */}
+                <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/incomes" element={<Incomes />} />
+                  <Route path="/expenses" element={<Expenses />} />
+                  <Route path="/envelopes" element={<Envelopes />} />
+                  <Route path="/savings" element={<Savings />} />
+                  <Route path="/global" element={<GlobalView />} />
+                  <Route path="/account" element={<Account />} />
+                </Route>
 
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </Router>
-        </MonthProvider>
-      </DashboardProvider>
-    </AuthProvider>
-  </ToastProvider>
+                {/* Pages de détail : mise en page mobile sur tous les écrans */}
+                <Route element={<ProtectedRoute><AppLayout mobileOnly /></ProtectedRoute>}>
+                  <Route path="/envelopes/:id" element={<EnvelopeDetail />} />
+                  <Route path="/savings/:id" element={<SavingDetail />} />
+                </Route>
+
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </Router>
+          </MonthProvider>
+        </DashboardProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

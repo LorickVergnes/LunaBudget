@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Trash2, AlertTriangle, CalendarOff, Calendar } from 'lucide-react';
+import { X, Trash2, AlertTriangle, CalendarOff } from 'lucide-react';
 
 const DeleteConfirmationModal = ({ 
   isOpen, 

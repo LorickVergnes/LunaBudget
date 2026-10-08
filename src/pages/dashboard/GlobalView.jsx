@@ -1,111 +1,88 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
-import { useDashboard } from '../../contexts/DashboardContext';
+import { useDashboardFetch } from '../../hooks/useDashboardFetch';
 import { formatMonthDate, getTodayStr, addMonths } from '../../lib/dateUtils';
 import { computeMonthTotals } from '../../lib/budgetCalculations';
 import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import BottomNav from '../../components/layout/BottomNav';
 import TopBar from '../../components/layout/TopBar';
-import DesktopHeader from '../../components/layout/DesktopHeader';
-import DesktopSidebar from '../../components/layout/DesktopSidebar';
 import useDesktop from '../../hooks/useDesktop';
 
 const GlobalView = () => {
-    const { user } = useAuth();
     const { selectedDate, setSelectedDate } = useMonth();
-    const { activeDashboard, loading: dashLoading } = useDashboard();
     const isDesktop = useDesktop();
-    const [loading, setLoading] = useState(true);
     const [months, setMonths] = useState([]);
     const [allTimeBalance, setAllTimeBalance] = useState(0);
     const [showForecast, setShowForecast] = useState(false);
-
-    const dashboardId = activeDashboard?.id;
 
     // Reset to current month on mount
     useEffect(() => {
         setSelectedDate(new Date());
     }, [setSelectedDate]);
 
-    const fetchGlobal = useCallback(async () => {
-        if (!dashboardId) return;
-        setLoading(true);
-        try {
-            const todayStr = getTodayStr();
-            const currentMonthStrFull = formatMonthDate(new Date());
+    const load = useCallback(async (dashboardId) => {
+        const todayStr = getTodayStr();
+        const currentMonthStrFull = formatMonthDate(new Date());
 
-            const currentMonthStr = formatMonthDate(selectedDate);
-            const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
-                supabase.from('incomes').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
-                supabase.from('envelopes').select('max_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
-                supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
-            ]);
+        const currentMonthStr = formatMonthDate(selectedDate);
+        const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
+            supabase.from('incomes').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+            supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+            supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
+            supabase.from('envelopes').select('max_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+            supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+            supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
+        ]);
 
-            const getMonthlyTotals = (monthStr, isForecastActive) => {
-                const monthStatus = monthStr < currentMonthStrFull ? 'past' : monthStr === currentMonthStrFull ? 'current' : 'future';
-                const ofMonth = (list) => (list || []).filter(x => x.month_date === monthStr);
+        const getMonthlyTotals = (monthStr, isForecastActive) => {
+            const monthStatus = monthStr < currentMonthStrFull ? 'past' : monthStr === currentMonthStrFull ? 'current' : 'future';
+            const ofMonth = (list) => (list || []).filter(x => x.month_date === monthStr);
 
-                const { real, forecast } = computeMonthTotals(
-                    {
-                        incomes: ofMonth(allInc), expenses: ofMonth(allExp),
-                        envelopes: ofMonth(allEnvs), envelopeExpenses: ofMonth(allEnvExp),
-                        savings: ofMonth(allSav), savingEntries: ofMonth(allSavEntries)
-                    },
-                    monthStatus,
-                    todayStr
-                );
-                // Le prévisionnel ne s'applique qu'au mois en cours
-                const totals = isForecastActive && monthStatus === 'current' ? forecast : real;
+            const { real, forecast } = computeMonthTotals(
+                {
+                    incomes: ofMonth(allInc), expenses: ofMonth(allExp),
+                    envelopes: ofMonth(allEnvs), envelopeExpenses: ofMonth(allEnvExp),
+                    savings: ofMonth(allSav), savingEntries: ofMonth(allSavEntries)
+                },
+                monthStatus,
+                todayStr
+            );
+            // Le prévisionnel ne s'applique qu'au mois en cours
+            const totals = isForecastActive && monthStatus === 'current' ? forecast : real;
 
-                return { income: totals.income, expense: totals.fixedExp + totals.envExp + totals.savings };
-            };
+            return { income: totals.income, expense: totals.fixedExp + totals.envExp + totals.savings };
+        };
 
-            const result = [];
-            for (let i = 5; i >= 0; i--) {
-                const d = addMonths(selectedDate, -i);
-                const str = formatMonthDate(d);
-                const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-                
-                const { income, expense } = getMonthlyTotals(str, showForecast);
-                result.push({ label, income, expense, balance: income - expense });
-            }
-            setMonths(result);
-
-            const allMonths = [...new Set([
-                ...(allInc||[]).map(x => x.month_date),
-                ...(allExp||[]).map(x => x.month_date),
-                ...(allSav||[]).map(x => x.month_date)
-            ])].sort();
-
-            let totalIncomesSum = 0;
-            let totalExpensesSum = 0;
-            allMonths.forEach(mStr => {
-                const { income, expense } = getMonthlyTotals(mStr, showForecast);
-                totalIncomesSum += income;
-                totalExpensesSum += expense;
-            });
+        const result = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = addMonths(selectedDate, -i);
+            const str = formatMonthDate(d);
+            const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
             
-            setAllTimeBalance(totalIncomesSum - totalExpensesSum);
-
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
-    }, [dashboardId, selectedDate, showForecast]);
-
-    useEffect(() => {
-        if (user) {
-            if (activeDashboard) {
-                fetchGlobal();
-            } else if (!dashLoading) {
-                setLoading(false);
-            }
+            const { income, expense } = getMonthlyTotals(str, showForecast);
+            result.push({ label, income, expense, balance: income - expense });
         }
-    }, [user, activeDashboard, dashLoading, fetchGlobal]);
+        setMonths(result);
+
+        const allMonths = [...new Set([
+            ...(allInc||[]).map(x => x.month_date),
+            ...(allExp||[]).map(x => x.month_date),
+            ...(allSav||[]).map(x => x.month_date)
+        ])].sort();
+
+        let totalIncomesSum = 0;
+        let totalExpensesSum = 0;
+        allMonths.forEach(mStr => {
+            const { income, expense } = getMonthlyTotals(mStr, showForecast);
+            totalIncomesSum += income;
+            totalExpensesSum += expense;
+        });
+        
+        setAllTimeBalance(totalIncomesSum - totalExpensesSum);
+    }, [selectedDate, showForecast]);
+
+    const { loading } = useDashboardFetch(load);
 
     const allIncome = months.reduce((a, m) => a + m.income, 0);
     const allExpense = months.reduce((a, m) => a + m.expense, 0);
@@ -130,124 +107,118 @@ const GlobalView = () => {
         ];
 
         return (
-            <div className="desktop-shell fade-in">
-                <DesktopHeader />
-                <div className="desktop-body">
-                    <DesktopSidebar />
-                    <main className="desktop-main">
+            <>
 
-                        {/* ── Top row: greeting + toggle ── */}
-                        <div className="desktop-greeting-toprow">
-                            <div className="desktop-greeting">
-                                <h1>Vue Globale 🌍</h1>
-                                <p>Analysez l'évolution de votre budget sur les 6 derniers mois.</p>
+                {/* ── Top row: greeting + toggle ── */}
+                <div className="desktop-greeting-toprow">
+                    <div className="desktop-greeting">
+                        <h1>Vue Globale 🌍</h1>
+                        <p>Analysez l'évolution de votre budget sur les 6 derniers mois.</p>
+                    </div>
+                    <div className="desktop-toggle">
+                        <button
+                            className={`desktop-toggle-btn${!showForecast ? ' desktop-toggle-btn--active' : ''}`}
+                            onClick={() => setShowForecast(false)}
+                        >
+                            Réel
+                        </button>
+                        <button
+                            className={`desktop-toggle-btn${showForecast ? ' desktop-toggle-btn--active' : ''}`}
+                            onClick={() => setShowForecast(true)}
+                        >
+                            Prévisions
+                        </button>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <LoadingSpinner />
+                ) : (
+                    <>
+                        {/* ── Hero: all-time balance ── */}
+                        <div className="desktop-global-hero" style={{ background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
+                            <div>
+                                <p className="desktop-global-hero-label" style={{ color: 'white', opacity: 0.9, textShadow: 'none' }}>Solde Total (Tous les mois)</p>
+                                <p className="desktop-global-hero-value" style={{ color: 'white' }}>{fmt(allTimeBalance)}</p>
                             </div>
-                            <div className="desktop-toggle">
-                                <button
-                                    className={`desktop-toggle-btn${!showForecast ? ' desktop-toggle-btn--active' : ''}`}
-                                    onClick={() => setShowForecast(false)}
-                                >
-                                    Réel
-                                </button>
-                                <button
-                                    className={`desktop-toggle-btn${showForecast ? ' desktop-toggle-btn--active' : ''}`}
-                                    onClick={() => setShowForecast(true)}
-                                >
-                                    Prévisions
-                                </button>
+                            <div className="desktop-global-hero-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                                <Globe size={24} color="white" />
                             </div>
                         </div>
 
-                        {loading ? (
-                            <LoadingSpinner />
-                        ) : (
-                            <>
-                                {/* ── Hero: all-time balance ── */}
-                                <div className="desktop-global-hero" style={{ background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
-                                    <div>
-                                        <p className="desktop-global-hero-label" style={{ color: 'white', opacity: 0.9, textShadow: 'none' }}>Solde Total (Tous les mois)</p>
-                                        <p className="desktop-global-hero-value" style={{ color: 'white' }}>{fmt(allTimeBalance)}</p>
+                        {/* ── KPI grid ── */}
+                        <div className="desktop-global-kpi-grid">
+                            {KPI_ITEMS.map(({ icon: Icon, label, value, color }) => (
+                                <div key={label} className="desktop-global-kpi-card">
+                                    <div className="desktop-global-kpi-icon-wrap" style={{ background: `${color}18` }}>
+                                        <Icon size={18} style={{ color }} />
                                     </div>
-                                    <div className="desktop-global-hero-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                                        <Globe size={24} color="white" />
-                                    </div>
+                                    <p className="desktop-global-kpi-label">{label}</p>
+                                    <p className="desktop-global-kpi-value" style={{ color }}>{value}</p>
                                 </div>
+                            ))}
+                        </div>
 
-                                {/* ── KPI grid ── */}
-                                <div className="desktop-global-kpi-grid">
-                                    {KPI_ITEMS.map(({ icon: Icon, label, value, color }) => (
-                                        <div key={label} className="desktop-global-kpi-card">
-                                            <div className="desktop-global-kpi-icon-wrap" style={{ background: `${color}18` }}>
-                                                <Icon size={18} style={{ color }} />
-                                            </div>
-                                            <p className="desktop-global-kpi-label">{label}</p>
-                                            <p className="desktop-global-kpi-value" style={{ color }}>{value}</p>
-                                        </div>
-                                    ))}
+                        {/* ── Bar chart ── */}
+                        <div className="desktop-chart-card">
+                            <div className="desktop-chart-header">
+                                <p className="desktop-card-title">Évolution mensuelle</p>
+                                <div className="desktop-chart-legend">
+                                    <span className="desktop-chart-legend-item">
+                                        <span className="desktop-chart-legend-dot" style={{ background: '#A0D2EB' }} />
+                                        Revenus
+                                    </span>
+                                    <span className="desktop-chart-legend-item">
+                                        <span className="desktop-chart-legend-dot" style={{ background: '#E5BA73' }} />
+                                        Dépenses
+                                    </span>
                                 </div>
-
-                                {/* ── Bar chart ── */}
-                                <div className="desktop-chart-card">
-                                    <div className="desktop-chart-header">
-                                        <p className="desktop-card-title">Évolution mensuelle</p>
-                                        <div className="desktop-chart-legend">
-                                            <span className="desktop-chart-legend-item">
-                                                <span className="desktop-chart-legend-dot" style={{ background: '#A0D2EB' }} />
-                                                Revenus
-                                            </span>
-                                            <span className="desktop-chart-legend-item">
-                                                <span className="desktop-chart-legend-dot" style={{ background: '#E5BA73' }} />
-                                                Dépenses
-                                            </span>
+                            </div>
+                            <div className="desktop-bars-container">
+                                {months.map((m, i) => (
+                                    <div key={i} className="desktop-bars-month">
+                                        <div className="desktop-bars-pair">
+                                            <div
+                                                className="desktop-bar"
+                                                style={{
+                                                    background: '#A0D2EB',
+                                                    height: `${(m.income / maxVal) * 136}px`,
+                                                }}
+                                            />
+                                            <div
+                                                className="desktop-bar"
+                                                style={{
+                                                    background: '#E5BA73',
+                                                    height: `${(m.expense / maxVal) * 136}px`,
+                                                }}
+                                            />
                                         </div>
+                                        <span className="desktop-bars-label">{m.label}</span>
                                     </div>
-                                    <div className="desktop-bars-container">
-                                        {months.map((m, i) => (
-                                            <div key={i} className="desktop-bars-month">
-                                                <div className="desktop-bars-pair">
-                                                    <div
-                                                        className="desktop-bar"
-                                                        style={{
-                                                            background: '#A0D2EB',
-                                                            height: `${(m.income / maxVal) * 136}px`,
-                                                        }}
-                                                    />
-                                                    <div
-                                                        className="desktop-bar"
-                                                        style={{
-                                                            background: '#E5BA73',
-                                                            height: `${(m.expense / maxVal) * 136}px`,
-                                                        }}
-                                                    />
-                                                </div>
-                                                <span className="desktop-bars-label">{m.label}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                ))}
+                            </div>
+                        </div>
 
-                                {/* ── Monthly table ── */}
-                                <div className="desktop-table-card">
-                                    <p className="desktop-card-title" style={{ marginBottom: 16 }}>Détail par mois</p>
-                                    {months.map((m, i) => (
-                                        <div key={i} className="desktop-table-row">
-                                            <span className="desktop-table-month">{m.label}</span>
-                                            <span className="desktop-table-income">+{m.income.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                                            <span className="desktop-table-expense">-{m.expense.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                                            <span
-                                                className="desktop-table-balance"
-                                                style={{ color: m.balance >= 0 ? '#22c55e' : '#ef4444' }}
-                                            >
-                                                {m.balance >= 0 ? '+' : ''}{m.balance.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
-                                            </span>
-                                        </div>
-                                    ))}
+                        {/* ── Monthly table ── */}
+                        <div className="desktop-table-card">
+                            <p className="desktop-card-title" style={{ marginBottom: 16 }}>Détail par mois</p>
+                            {months.map((m, i) => (
+                                <div key={i} className="desktop-table-row">
+                                    <span className="desktop-table-month">{m.label}</span>
+                                    <span className="desktop-table-income">+{m.income.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                                    <span className="desktop-table-expense">-{m.expense.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                                    <span
+                                        className="desktop-table-balance"
+                                        style={{ color: m.balance >= 0 ? '#22c55e' : '#ef4444' }}
+                                    >
+                                        {m.balance >= 0 ? '+' : ''}{m.balance.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
+                                    </span>
                                 </div>
-                            </>
-                        )}
-                    </main>
-                </div>
-            </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </>
         );
     }
 
@@ -366,7 +337,6 @@ const GlobalView = () => {
                     </>
                 )}
             </div>
-            <BottomNav />
         </div>
     );
 };
