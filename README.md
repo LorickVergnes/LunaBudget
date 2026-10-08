@@ -52,8 +52,21 @@ La stack est choisie pour minimiser la maintenance tout en maximisant la scalabi
 *   `services/` : Seule couche autorisée à interagir avec les APIs externes (Supabase, Stripe).
 
 ### Backend & Infrastructure
-*   `database_schema.sql` : Source de vérité du schéma PostgreSQL.
-*   `supabase/functions/` : Logique serveur sécurisée (Edge Functions).
+*   `supabase/migrations/` : Source de vérité du schéma PostgreSQL. Chaque changement de la base est un fichier daté, appliqué avec le Supabase CLI.
+*   `supabase/email-templates/` : Modèles des emails envoyés par Supabase Auth (à coller dans le dashboard).
+*   `supabase/archive/` : Anciens scripts SQL exécutés à la main avant les migrations. Historique uniquement, à ne plus exécuter.
+*   `supabase/functions/` : Logique serveur sécurisée (Edge Functions), à venir.
+
+#### Modifier la base de données
+La structure de la base ne se modifie plus depuis le dashboard Supabase, mais par une migration :
+
+1.  `npx supabase migration new nom_du_changement` crée un fichier vide dans `supabase/migrations/`.
+2.  Écrire le SQL dans ce fichier.
+3.  `npm run db:reset` reconstruit la base locale (Docker) avec toutes les migrations, pour tester.
+4.  `npm run db:push` applique en production les migrations qui manquent.
+5.  Commiter le fichier.
+
+`npm run db:diff` compare les migrations à la base de production (aucune différence attendue), et `npm run db:pull` récupère une modification faite par erreur dans le dashboard.
 
 ---
 

@@ -11,6 +11,9 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      # Vrai seulement si le secret SUPABASE_ACCESS_TOKEN existe dans les réglages du dépôt
+      HAS_SUPABASE_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
 
     steps:
       - name: Checkout 🛎️
@@ -31,6 +34,14 @@ jobs:
 
       - name: Test 🧪
         run: npm test
+
+      # Applique en production les migrations qui manquent, avant de publier le frontend qui en dépend.
+      # Étape ignorée tant que le secret SUPABASE_ACCESS_TOKEN n'est pas configuré.
+      - name: Migrations 🗄️
+        if: env.HAS_SUPABASE_TOKEN == 'true'
+        run: npx supabase db push --project-ref ikxsleqnywxzqcqkmytg --yes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Build 🔧
         run: npm run build
