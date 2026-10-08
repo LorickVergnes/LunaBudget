@@ -63,6 +63,17 @@ export const DATA = {
 export const log = { ops: [], reads: [] };
 let listeners = [];
 
+// État d'authentification simulé
+let session = { user: USER };
+let authListeners = [];
+let nextAuthError = null;
+const authResult = () => {
+  const error = nextAuthError;
+  nextAuthError = null;
+  return { data: {}, error };
+};
+const logAuth = (op, payload) => log.ops.push({ table: 'auth', op, payload: sortKeys(payload), filters: [] });
+
 const sortKeys = (value) => {
   if (Array.isArray(value)) return value.map(sortKeys);
   if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(k => [k, sortKeys(value[k])]));
@@ -109,10 +120,15 @@ export const supabase = {
     return { data: null, error: null };
   },
   auth: {
-    getSession: async () => ({ data: { session: { user: USER } } }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+    getSession: async () => ({ data: { session } }),
+    onAuthStateChange: (callback) => {
+      authListeners.push(callback);
+      return { data: { subscription: { unsubscribe() { authListeners = authListeners.filter(l => l !== callback); } } } };
+    },
     signOut: async () => ({ error: null }),
-    updateUser: async (payload) => { log.ops.push({ table: 'auth', op: 'updateUser', payload: sortKeys(payload), filters: [] }); return { error: null }; },
+    signInWithPassword: async (payload) => { logAuth('signInWithPassword', { email: payload.email }); return authResult(); },
+    updateUser: async (payload) => { logAuth('updateUser', payload); return authResult(); },
+    resetPasswordForEmail: async (email, options) => { logAuth('resetPasswordForEmail', { email, ...options }); return authResult(); },
   },
   channel: (name) => {
     const channel = {
@@ -130,4 +146,17 @@ export const emitRealtime = (table, eventType, newRecord, oldRecord) => {
   listeners.filter(l => l.table === table).forEach(l => l.callback({ eventType, new: newRecord ?? {}, old: oldRecord ?? {} }));
 };
 export const listenedTables = () => [...new Set(listeners.map(l => l.table))].sort();
-export const resetMock = () => { log.ops.length = 0; log.reads.length = 0; listeners = []; };
+export const resetMock = () => {
+  log.ops.length = 0; log.reads.length = 0; listeners = [];
+  session = { user: USER }; nextAuthError = null;
+};
+
+// Visiteur non connecté (null) ou connecté
+export const setMockSession = (value) => { session = value; };
+// La prochaine opération d'authentification échouera avec cette erreur
+export const failNextAuthCall = (error) => { nextAuthError = error; };
+// Simule un événement d'authentification envoyé par Supabase (ex. PASSWORD_RECOVERY)
+export const emitAuth = async (event, newSession = session) => {
+  session = newSession;
+  await Promise.all(authListeners.map(listener => listener(event, newSession)));
+};

@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import fs from 'node:fs';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { log, emitRealtime, listenedTables, resetMock, DATA, USER, OTHER_USER_ID, DASHBOARD_ID } from './supabaseMock';
+import { log, emitRealtime, listenedTables, resetMock, setMockSession, DATA, USER, OTHER_USER_ID, DASHBOARD_ID } from './supabaseMock';
 import { resetOwnChanges } from '../lib/ownChanges';
 import App from '../App';
 
@@ -27,6 +27,8 @@ const ROUTES = [
   ['envelopes', '/envelopes'], ['envelope-detail', '/envelopes/env1'],
   ['savings', '/savings'], ['saving-detail', '/savings/sav1'],
   ['global', '/global'], ['account', '/account'],
+  // Pages publiques, vues par un visiteur non connecté
+  ['login', '/login', { loggedOut: true }], ['signup', '/signup', { loggedOut: true }],
 ];
 const VIEWPORTS = [['desktop', 1280], ['mobile', 400]];
 
@@ -38,9 +40,10 @@ const settle = async (rounds = 6) => {
   for (let i = 0; i < rounds; i++) await act(async () => { await new Promise(r => setTimeout(r, 15)); });
 };
 
-const mount = async (path, width) => {
+const mount = async (path, width, { loggedOut = false } = {}) => {
   if (root) await act(async () => { root.unmount(); });
   resetMock();
+  if (loggedOut) setMockSession(null);
   resetOwnChanges();
   localStorage.clear();
   window.innerWidth = width;
@@ -91,11 +94,11 @@ describe('rendu des pages', () => {
   });
 
   for (const [vp, width] of VIEWPORTS) {
-    for (const [name, path] of ROUTES) {
+    for (const [name, path, options] of ROUTES) {
       const key = `${name}/${vp}`;
 
       it(`${key} : affichage`, async () => {
-        await mount(path, width);
+        await mount(path, width, options);
         snapshot(`${key}/base`, { realtimeTables: listenedTables() });
         expect(document.querySelector('.loading-container')).toBeNull();
         expect(document.body.textContent.length).toBeGreaterThan(50);

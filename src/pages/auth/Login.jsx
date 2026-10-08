@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Loader2, ArrowRight, BarChart2 } from 'lucide-react';
+import { Mail, Lock, BarChart2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { hasAuthLinkError, clearAuthLinkError } from '../../lib/authLink';
+import { AuthShell, AuthLink, AuthError, AuthField, AuthSubmit } from '../../components/auth/AuthUI';
 
 const Login = () => {
   const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  // Arrivée par un lien d'email invalide ou expiré : on l'explique une fois
+  const [error, setError] = useState(() => (
+    hasAuthLinkError() ? 'Ce lien est invalide ou a expiré. Utilisez « Mot de passe oublié » pour en recevoir un nouveau.' : null
+  ));
   const navigate = useNavigate();
+
+  useEffect(() => { clearAuthLinkError(); }, []);
 
   // STABILISATION : Si déjà connecté, on redirige vers le dashboard
   useEffect(() => {
@@ -27,54 +34,20 @@ const Login = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg,#A0D2EB,#E5BA73)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 8px 24px rgba(160,210,235,.35)' }}>
-            <BarChart2 size={30} color="white" />
-          </div>
-          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#4A6984', marginBottom: 6 }}>Content de vous revoir</h1>
-          <p style={{ fontSize: 14, color: '#B0B8C9', fontWeight: 500 }}>Connectez-vous à votre budget</p>
+    <AuthShell icon={BarChart2} title="Content de vous revoir" subtitle="Connectez-vous à votre budget"
+      footer={<>Pas encore de compte ?{' '}<AuthLink to="/signup">S'inscrire</AuthLink></>}>
+      <AuthError>{error}</AuthError>
+      <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <AuthField label="Email" icon={Mail} type="email" required placeholder="votre@email.com"
+          value={email} onChange={e => setEmail(e.target.value)} />
+        <AuthField label="Mot de passe" icon={Lock} type="password" required placeholder="••••••••"
+          value={password} onChange={e => setPassword(e.target.value)} />
+        <div style={{ textAlign: 'right', marginTop: -6 }}>
+          <Link to="/forgot-password" style={{ fontSize: 13, color: '#A0D2EB', fontWeight: 700, textDecoration: 'none' }}>Mot de passe oublié ?</Link>
         </div>
-
-        {/* Form card */}
-        <div className="card" style={{ padding: 24 }}>
-          {error && (
-            <div style={{ background: '#FFF0F0', border: '1px solid #FFCDD2', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontSize: 13, fontWeight: 600, color: '#ef4444' }}>
-              {error}
-            </div>
-          )}
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Email</label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#B0B8C9' }} />
-                <input type="email" required placeholder="votre@email.com" className="field" style={{ paddingLeft: 42 }}
-                  value={email} onChange={e => setEmail(e.target.value)} />
-              </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Mot de passe</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#B0B8C9' }} />
-                <input type="password" required placeholder="••••••••" className="field" style={{ paddingLeft: 42 }}
-                  value={password} onChange={e => setPassword(e.target.value)} />
-              </div>
-            </div>
-            <button type="submit" disabled={loading}
-              style={{ background: 'linear-gradient(135deg,#A0D2EB,#E5BA73)', color: 'white', border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 6px 20px rgba(160,210,235,.4)', marginTop: 4 }}>
-              {loading ? <Loader2 size={20} className="animate-spin-smooth" /> : <><span>Se connecter</span><ArrowRight size={18} /></>}
-            </button>
-          </form>
-        </div>
-
-        <p style={{ textAlign: 'center', fontSize: 14, color: '#B0B8C9', fontWeight: 500, marginTop: 20 }}>
-          Pas encore de compte ?{' '}
-          <Link to="/signup" style={{ color: '#A0D2EB', fontWeight: 700, textDecoration: 'none' }}>S'inscrire</Link>
-        </p>
-      </div>
-    </div>
+        <AuthSubmit loading={loading}>Se connecter</AuthSubmit>
+      </form>
+    </AuthShell>
   );
 };
 export default Login;
