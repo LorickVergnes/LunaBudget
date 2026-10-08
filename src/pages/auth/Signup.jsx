@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
+import { translateAuthError } from '../../lib/authErrors';
 import { AuthShell, AuthLink, AuthError, AuthField, AuthSubmit, AuthNotice } from '../../components/auth/AuthUI';
 
 const Signup = () => {
@@ -29,7 +30,7 @@ const Signup = () => {
     });
 
     if (error) {
-      setError(error.message);
+      setError(translateAuthError(error));
       setLoading(false);
     } else {
       setSuccess(true);

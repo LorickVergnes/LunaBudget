@@ -34,6 +34,16 @@ describe('translateAuthError', () => {
     expect(translateAuthError({ code: 'otp_expired', message: 'x' })).toMatch(/invalide ou a expiré/);
   });
 
+  it('connexion refusée : un seul message, que ce soit l\'email ou le mot de passe qui est faux', () => {
+    expect(translateAuthError({ code: 'invalid_credentials', message: 'Invalid login credentials' })).toBe('Email ou mot de passe incorrect.');
+    expect(translateAuthError({ message: 'Invalid login credentials' })).toBe('Email ou mot de passe incorrect.');
+  });
+
+  it('traduit les erreurs de compte', () => {
+    expect(translateAuthError({ code: 'email_not_confirmed', message: 'Email not confirmed' })).toMatch(/pas encore confirmée/);
+    expect(translateAuthError({ message: 'User already registered' })).toMatch(/existe déjà/);
+  });
+
   it('traduit les erreurs connues par leur message', () => {
     expect(translateAuthError({ message: 'New password should be different from the old password.' })).toMatch(/différent de l'ancien/);
     expect(translateAuthError({ message: 'For security purposes, you can only request this after 42 seconds.' })).toMatch(/Trop de demandes/);

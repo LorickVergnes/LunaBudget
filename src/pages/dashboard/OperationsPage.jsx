@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import { getMonthStatus, isRealized, filterRealized, sumAmounts, roundToCents } from '../../lib/budgetCalculations';
 import { Plus, RotateCw, Trash2, Pencil } from 'lucide-react';
@@ -23,7 +24,7 @@ import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
 const euros = (value, options) => parseFloat(value).toLocaleString('fr-FR', options);
 
 // Ligne de la liste : une opération avec ses boutons modifier / supprimer
-const OperationItem = ({ item, index, config, isUpcoming, showForecast, onEdit, onDelete }) => {
+const OperationItem = ({ item, index, config, isUpcoming, showForecast, canEdit, onEdit, onDelete }) => {
   const color = item.color || config.accent;
   return (
     <div className="card fade-up" style={{
@@ -47,7 +48,7 @@ const OperationItem = ({ item, index, config, isUpcoming, showForecast, onEdit, 
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {item.is_recurrent && <RotateCw size={12} style={{ color: config.recurrentIconColor }} />}
-        <button
+        {canEdit && <button
           onClick={onEdit}
           style={{
             background: '#F3F4F6', border: 'none', borderRadius: 10, width: 36, height: 36,
@@ -55,8 +56,8 @@ const OperationItem = ({ item, index, config, isUpcoming, showForecast, onEdit, 
           }}
         >
           <Pencil size={18} style={{ color: '#6B7280' }} />
-        </button>
-        <button
+        </button>}
+        {canEdit && <button
           onClick={onDelete}
           style={{
             background: '#FEE2E2', border: 'none', borderRadius: 10, width: 36, height: 36,
@@ -64,7 +65,7 @@ const OperationItem = ({ item, index, config, isUpcoming, showForecast, onEdit, 
           }}
         >
           <Trash2 size={18} style={{ color: '#EF4444' }} />
-        </button>
+        </button>}
       </div>
     </div>
   );
@@ -77,6 +78,7 @@ const OperationItem = ({ item, index, config, isUpcoming, showForecast, onEdit, 
 const OperationsPage = ({ config }) => {
   const { table, accent, texts } = config;
   const { selectedDate, setSelectedDate } = useMonth();
+  const { canEdit } = useDashboard();
   const isDesktop = useDesktop();
   const [items, setItems] = useState([]);
   const [showForecast, setShowForecast] = useState(false);
@@ -147,7 +149,7 @@ const OperationsPage = ({ config }) => {
   );
 
   const list = items.map((item, i) => (
-    <OperationItem key={item.id} item={item} index={i} config={config} showForecast={showForecast}
+    <OperationItem key={item.id} item={item} index={i} config={config} showForecast={showForecast} canEdit={canEdit}
       isUpcoming={!isRealized(item.date, monthStatus, todayStr)}
       onEdit={() => form.openEdit(item)} onDelete={() => deletion.askDelete(item)} />
   ));
@@ -166,10 +168,10 @@ const OperationsPage = ({ config }) => {
               <button className={`desktop-toggle-btn${!showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(false)}>Réel</button>
               <button className={`desktop-toggle-btn${showForecast ? ' desktop-toggle-btn--active' : ''}`} onClick={() => setShowForecast(true)}>Prévisions</button>
             </div>
-            <button onClick={form.openCreate}
+            {canEdit && <button onClick={form.openCreate}
               style={{ display: 'flex', alignItems: 'center', gap: 8, background: accent, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: config.addButtonShadow }}>
               <Plus size={18} /> Ajouter
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -275,7 +277,7 @@ const OperationsPage = ({ config }) => {
           </>
         )}
       </div>
-      {!form.showForm && (
+      {canEdit && !form.showForm && (
         <button onClick={form.openCreate}
           style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />

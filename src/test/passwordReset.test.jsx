@@ -61,6 +61,20 @@ const clickLink = async (label) => {
 };
 const authCalls = (op) => mock.log.ops.filter(o => o.table === 'auth' && o.op === op);
 
+describe('connexion', () => {
+  it('mauvais identifiants : message en français, sans dire lequel des deux est faux', async () => {
+    await start('#/login');
+    mock.failNextAuthCall({ code: 'invalid_credentials', message: 'Invalid login credentials' });
+    await type(inputs()[0], 'lorick@test.fr');
+    await type(inputs()[1], 'mauvais-mot-de-passe');
+    await submit();
+
+    expect(text()).toContain('Email ou mot de passe incorrect.');
+    expect(text()).not.toContain('Invalid login credentials');
+    expect(window.location.hash).toBe('#/login');
+  });
+});
+
 describe('demande du lien de réinitialisation', () => {
   it('la page de connexion mène à « Mot de passe oublié »', async () => {
     await start('#/login');

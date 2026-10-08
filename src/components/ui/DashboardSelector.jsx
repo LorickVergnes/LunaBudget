@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { ChevronDown, Plus, Users, Layout, Settings } from 'lucide-react';
+import { ChevronDown, Plus, Users, Layout, Settings, Eye, Mail } from 'lucide-react';
 import DashboardSettingsModal from './DashboardSettingsModal';
 import CreateDashboardModal from './CreateDashboardModal';
 
 const DashboardSelector = ({ isDesktop = false }) => {
   const { user } = useAuthContext();
-  const { dashboards, activeDashboard, switchDashboard } = useDashboard();
+  const { dashboards, activeDashboard, switchDashboard, canEdit, myInvitations, openInvitations } = useDashboard();
   const [isOpen, setIsOpen] = useState(false);
   
   // Modals state
@@ -43,6 +43,10 @@ const DashboardSelector = ({ isDesktop = false }) => {
         }}>
           {activeDashboard.name}
         </span>
+        {/* Lecteur : ce budget est en lecture seule */}
+        {!canEdit && <Eye size={15} style={{ color: '#B0B8C9', flexShrink: 0 }} aria-label="Lecture seule" />}
+        {/* Invitations reçues en attente de réponse */}
+        {myInvitations.length > 0 && <span aria-label="Invitations en attente" style={{ width: 8, height: 8, borderRadius: '50%', background: '#E5BA73', flexShrink: 0 }} />}
         <ChevronDown size={16} style={{ color: '#B0B8C9' }} />
       </button>
 
@@ -103,7 +107,34 @@ const DashboardSelector = ({ isDesktop = false }) => {
             </div>
             
             <div style={{ height: 1, background: '#F5F7FF', margin: '8px 0' }} />
-            
+
+            {myInvitations.length > 0 && (
+              <button
+                onClick={() => { openInvitations(); setIsOpen(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  width: '100%',
+                  padding: '10px 12px',
+                  marginBottom: 8,
+                  border: 'none',
+                  background: '#E5BA7322',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  color: '#B8893A'
+                }}
+              >
+                <div style={{ background: 'white', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Mail size={13} strokeWidth={2.5} />
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 800 }}>
+                  {myInvitations.length === 1 ? '1 invitation reçue' : `${myInvitations.length} invitations reçues`}
+                </span>
+              </button>
+            )}
+
             <button
               onClick={() => { setShowCreateModal(true); setIsOpen(false); }}
               style={{

@@ -4,6 +4,7 @@ import useDesktop from '../../hooks/useDesktop';
 import DesktopHeader from './DesktopHeader';
 import DesktopSidebar from './DesktopSidebar';
 import BottomNav from './BottomNav';
+import InvitationsModal from '../ui/InvitationsModal';
 
 /**
  * Cadre commun à toutes les pages connectées : la page active s'affiche dans <Outlet />.
@@ -29,6 +30,7 @@ const AppLayout = ({ mobileOnly = false }) => {
             <Outlet />
           </main>
         </div>
+        <InvitationsModal />
       </div>
     );
   }
@@ -37,6 +39,7 @@ const AppLayout = ({ mobileOnly = false }) => {
     <>
       <Outlet />
       <BottomNav />
+      <InvitationsModal />
     </>
   );
 };

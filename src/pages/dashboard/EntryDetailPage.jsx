@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeTable } from '../../hooks/useRealtimeTable';
 import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
@@ -28,6 +29,7 @@ const EntryDetailPage = ({ config }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedDate } = useMonth();
+  const { canEdit } = useDashboard();
   const { showToast } = useToast();
   // Nom, icône et couleur du parent sont transmis par la page de liste
   const [parentName] = useState(location.state?.name || config.defaultName);
@@ -123,7 +125,7 @@ const EntryDetailPage = ({ config }) => {
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button
+                  {canEdit && <button
                     onClick={() => form.openEdit(entry)}
                     style={{
                       background: '#F3F4F6', border: 'none', borderRadius: 10, width: 36, height: 36,
@@ -131,8 +133,8 @@ const EntryDetailPage = ({ config }) => {
                     }}
                   >
                     <Pencil size={18} style={{ color: '#6B7280' }} />
-                  </button>
-                  <button
+                  </button>}
+                  {canEdit && <button
                     onClick={() => deletion.askDelete(entry)}
                     style={{
                       background: '#FEE2E2', border: 'none', borderRadius: 10, width: 36, height: 36,
@@ -140,7 +142,7 @@ const EntryDetailPage = ({ config }) => {
                     }}
                   >
                     <Trash2 size={18} style={{ color: '#EF4444' }} />
-                  </button>
+                  </button>}
                 </div>
               </div>
             ))}
@@ -148,7 +150,7 @@ const EntryDetailPage = ({ config }) => {
         )}
       </div>
 
-      {!form.showForm && (
+      {canEdit && !form.showForm && (
         <button onClick={form.openCreate}
           style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />

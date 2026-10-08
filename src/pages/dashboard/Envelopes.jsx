@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useDashboardFetch } from '../../hooks/useDashboardFetch';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
@@ -27,6 +28,7 @@ const ACCENT = '#A0D2EB';
 const Envelopes = () => {
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useMonth();
+  const { canEdit } = useDashboard();
   const isDesktop = useDesktop();
   const [envelopes, setEnvelopes] = useState([]);
 
@@ -139,7 +141,7 @@ const Envelopes = () => {
             </div>
           </div>
   
-          <div style={{ display: 'flex', gap: 8 }}>
+          {canEdit && <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={(ev) => { ev.stopPropagation(); form.openEdit(e); }}
               style={{
@@ -161,7 +163,7 @@ const Envelopes = () => {
             >
               <Trash2 size={14} />
             </button>
-          </div>
+          </div>}
         </div>
       );
     }
@@ -192,14 +194,14 @@ const Envelopes = () => {
         <div style={{ marginTop: 12 }}>
           <ProgressLinear value={spent} max={target} color={over ? '#EF4444' : (e.color || ACCENT)} height={8} />
         </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        {canEdit && <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button onClick={(ev) => { ev.stopPropagation(); form.openEdit(e); }} style={{ flex: 1, padding: '8px', borderRadius: 10, background: '#E6F0F9', color: '#5695B7', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Pencil size={12} /> Modifier
           </button>
           <button onClick={(ev) => { ev.stopPropagation(); deletion.askDelete(e); }} style={{ padding: '8px 12px', borderRadius: 10, background: '#FEECEC', color: '#DC2626', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}>
             <Trash2 size={12} />
           </button>
-        </div>
+        </div>}
       </div>
     );
   };
@@ -215,10 +217,10 @@ const Envelopes = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
-            <button onClick={form.openCreate}
+            {canEdit && <button onClick={form.openCreate}
               style={{ display: 'flex', alignItems: 'center', gap: 8, background: ACCENT, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(160,210,235,0.35)' }}>
               <Plus size={18} /> Nouvelle enveloppe
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -289,7 +291,7 @@ const Envelopes = () => {
           </>
         )}
       </div>
-      {!form.showForm && (
+      {canEdit && !form.showForm && (
         <button onClick={form.openCreate}
           style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#A0D2EB', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(160,210,235,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />

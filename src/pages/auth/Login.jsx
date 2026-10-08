@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, BarChart2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { hasAuthLinkError, clearAuthLinkError } from '../../lib/authLink';
+import { translateAuthError } from '../../lib/authErrors';
 import { AuthShell, AuthLink, AuthError, AuthField, AuthSubmit } from '../../components/auth/AuthUI';
 
 const Login = () => {
@@ -29,7 +30,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault(); setLoading(true); setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setError(error.message); setLoading(false); }
+    if (error) { setError(translateAuthError(error)); setLoading(false); }
     else navigate('/');
   };
 

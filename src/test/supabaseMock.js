@@ -31,6 +31,7 @@ export const DATA = {
       { id: 'm1', dashboard_id: DASHBOARD_ID, user_id: 'u1', role: 'owner', profile: { full_name: 'Lorick', email: 'lorick@test.fr', avatar_url: null } },
       { id: 'm2', dashboard_id: DASHBOARD_ID, user_id: 'u2', role: 'editor', profile: { full_name: 'Alex', email: 'alex@test.fr', avatar_url: null } },
     ],
+    invitations: [],
   }],
   incomes: [
     { ...base, id: 'inc1', user_id: 'u1', name: 'Salaire', amount: 1380, date: '2026-10-06', is_recurrent: true, icon: 'Briefcase', color: '#A0D2EB', month_date: OCT },
@@ -62,6 +63,8 @@ export const DATA = {
 
 export const log = { ops: [], reads: [] };
 let listeners = [];
+
+let myInvitations = [];
 
 // État d'authentification simulé
 let session = { user: USER };
@@ -116,7 +119,14 @@ const from = (table) => {
 export const supabase = {
   from,
   rpc: async (name, args) => {
+    // Les fonctions qui modifient la base sont enregistrées comme des écritures
+    if (name === 'accept_invitation' || name === 'decline_invitation') {
+      log.ops.push({ table: 'rpc', op: name, payload: sortKeys(args), filters: [] });
+      myInvitations = myInvitations.filter(invitation => invitation.id !== args.invitation_id);
+      return { data: name === 'accept_invitation' ? DASHBOARD_ID : null, error: null };
+    }
     log.reads.push(`rpc ${name} | ${JSON.stringify(sortKeys(args))}`);
+    if (name === 'get_my_invitations') return { data: myInvitations, error: null };
     return { data: null, error: null };
   },
   auth: {
@@ -149,7 +159,22 @@ export const listenedTables = () => [...new Set(listeners.map(l => l.table))].so
 export const resetMock = () => {
   log.ops.length = 0; log.reads.length = 0; listeners = [];
   session = { user: USER }; nextAuthError = null;
+  myInvitations = [];
+  setMockRole('owner');
+  DATA.dashboards[0].invitations = [];
 };
+
+// Rôle de l'utilisateur connecté sur le dashboard : 'owner', 'editor' ou 'viewer'
+export function setMockRole(role) {
+  const dashboard = DATA.dashboards[0];
+  dashboard.owner_id = role === 'owner' ? USER.id : OTHER_USER_ID;
+  dashboard.members.find(member => member.user_id === USER.id).role = role;
+  dashboard.members.find(member => member.user_id === OTHER_USER_ID).role = role === 'owner' ? 'editor' : 'owner';
+}
+// Invitations reçues par l'utilisateur connecté (réponse de get_my_invitations)
+export const setMockMyInvitations = (list) => { myInvitations = list; };
+// Invitations envoyées par le propriétaire, en attente
+export const setMockSentInvitations = (list) => { DATA.dashboards[0].invitations = list; };
 
 // Visiteur non connecté (null) ou connecté
 export const setMockSession = (value) => { session = value; };

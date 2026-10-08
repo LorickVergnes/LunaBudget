@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useDashboardFetch } from '../../hooks/useDashboardFetch';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
@@ -27,6 +28,7 @@ const ACCENT = '#A0D2EB';
 const Savings = () => {
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useMonth();
+  const { canEdit } = useDashboard();
   const isDesktop = useDesktop();
   const [goals, setGoals] = useState([]);
   const monthStr = formatMonthDate(selectedDate);
@@ -178,9 +180,9 @@ const Savings = () => {
                 textShadow: '0 1px 2px rgba(0,0,0,0.2)'
               }}
             >
-              <Plus size={14} /> Alimenter
+              {canEdit ? <><Plus size={14} /> Alimenter</> : 'Voir les versements'}
             </button>
-            <button
+            {canEdit && <button
               onClick={(ev) => { ev.stopPropagation(); form.openEdit(s); }}
               style={{
                 padding: '10px 14px', borderRadius: 12,
@@ -189,8 +191,8 @@ const Savings = () => {
               }}
             >
               <Pencil size={14} />
-            </button>
-            <button
+            </button>}
+            {canEdit && <button
               onClick={(ev) => { ev.stopPropagation(); deletion.askDelete(s); }}
               style={{
                 padding: '10px 14px', borderRadius: 12,
@@ -199,7 +201,7 @@ const Savings = () => {
               }}
             >
               <Trash2 size={14} />
-            </button>
+            </button>}
           </div>
         </div>
       );
@@ -245,9 +247,9 @@ const Savings = () => {
               textShadow: '0 1px 2px rgba(0,0,0,0.2)'
             }}
           >
-            <Plus size={14} /> Alimenter
+            {canEdit ? <><Plus size={14} /> Alimenter</> : 'Voir les versements'}
           </button>
-          <button
+          {canEdit && <button
             onClick={(ev) => { ev.stopPropagation(); form.openEdit(s); }}
             style={{
               padding: '9px 14px', borderRadius: 11,
@@ -256,8 +258,8 @@ const Savings = () => {
             }}
           >
             <Pencil size={14} />
-          </button>
-          <button
+          </button>}
+          {canEdit && <button
             onClick={(ev) => { ev.stopPropagation(); deletion.askDelete(s); }}
             style={{
               padding: '9px 14px', borderRadius: 11,
@@ -266,7 +268,7 @@ const Savings = () => {
             }}
           >
             <Trash2 size={14} />
-          </button>
+          </button>}
         </div>
       </div>
     );
@@ -283,10 +285,10 @@ const Savings = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
-            <button onClick={form.openCreate}
+            {canEdit && <button onClick={form.openCreate}
               style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9A825', color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(249,168,37,0.35)' }}>
               <Plus size={18} /> Nouvel objectif
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -353,7 +355,7 @@ const Savings = () => {
           </>
         )}
       </div>
-      {!form.showForm && (
+      {canEdit && !form.showForm && (
         <button onClick={form.openCreate}
           style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#F9A825', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 24px rgba(249,168,37,.5)', zIndex: 40 }}>
           <Plus size={26} color="white" />
