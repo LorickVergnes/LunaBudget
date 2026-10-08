@@ -17,7 +17,11 @@ const envelopeExpenses = [
 const savingEntries = [
   { ...base, id: 'se1', user_id: 'u1', saving_id: 'sav1', amount: 50, date: '2026-10-02', month_date: OCT, savings: { name: 'Voyage', icon: 'Plane', color: '#F9A825' } },
   { ...base, id: 'se2', user_id: 'u1', saving_id: 'sav1', amount: 25, date: '2026-10-28', month_date: OCT, savings: { name: 'Voyage', icon: 'Plane', color: '#F9A825' } },
+  // Versements des mois précédents : ils comptent dans le cumul de l'objectif
+  { ...base, id: 'se3', user_id: 'u1', saving_id: 'sav1', amount: 100, date: '2026-08-12', month_date: '2026-08-01', savings: { name: 'Voyage', icon: 'Plane', color: '#F9A825' } },
+  { ...base, id: 'se4', user_id: 'u1', saving_id: 'sav3', amount: 60, date: '2026-06-15', month_date: '2026-06-01', savings: { name: 'Ancien projet', icon: 'Gift', color: '#22c55e' } },
 ];
+const entriesOf = (savingId) => savingEntries.filter(e => e.saving_id === savingId);
 
 export const DATA = {
   profiles: [{ id: 'u1', email: 'lorick@test.fr', full_name: 'Lorick', avatar_url: null, role: 'free' }],
@@ -46,8 +50,12 @@ export const DATA = {
   ],
   envelope_expenses: envelopeExpenses,
   savings: [
-    { ...base, id: 'sav1', user_id: 'u1', name: 'Voyage', target_amount: 100, is_recurrent: true, icon: 'Plane', color: '#F9A825', month_date: OCT, max_month: '2027-03-01', saving_entries: savingEntries },
-    { ...base, id: 'sav2', user_id: 'u2', name: 'Urgences', target_amount: 40, is_recurrent: false, icon: null, color: null, month_date: OCT, max_month: null, saving_entries: [] },
+    // Objectif avec montant à atteindre et échéance
+    { id: 'sav1', dashboard_id: DASHBOARD_ID, user_id: 'u1', name: 'Voyage', monthly_amount: 100, goal_amount: 2000, icon: 'Plane', color: '#F9A825', start_month: '2026-07-01', end_month: '2027-03-01', created_at: '2026-07-01T08:00:00+00:00', saving_entries: entriesOf('sav1') },
+    // Épargne régulière sans plafond ni fin
+    { id: 'sav2', dashboard_id: DASHBOARD_ID, user_id: 'u2', name: 'Urgences', monthly_amount: 40, goal_amount: null, icon: null, color: null, start_month: OCT, end_month: null, created_at: '2026-10-01T08:00:00+00:00', saving_entries: [] },
+    // Objectif terminé : n'apparaît plus en octobre mais compte dans le patrimoine
+    { id: 'sav3', dashboard_id: DASHBOARD_ID, user_id: 'u1', name: 'Ancien projet', monthly_amount: 30, goal_amount: null, icon: 'Gift', color: '#22c55e', start_month: '2026-05-01', end_month: '2026-08-01', created_at: '2026-05-01T08:00:00+00:00', saving_entries: entriesOf('sav3') },
   ],
   saving_entries: savingEntries,
 };

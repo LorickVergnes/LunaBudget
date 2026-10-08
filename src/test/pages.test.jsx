@@ -169,7 +169,8 @@ describe('rendu des pages', () => {
         // Laisse passer la fenêtre pendant laquelle les copies de récurrence sont considérées comme les nôtres
         vi.setSystemTime(new Date(Date.now() + 6000));
         for (const table of tables) {
-          const existing = DATA[table].find(r => r.month_date === '2026-10-01');
+          // Les objectifs d'épargne n'appartiennent à aucun mois : on prend alors le premier
+          const existing = DATA[table].find(r => r.month_date === '2026-10-01') ?? DATA[table][0];
           const fresh = { ...existing, id: 'rt1', name: 'Depuis un autre' };
           const events = [
             ['insert-autre', 'INSERT', { ...fresh, user_id: OTHER_USER_ID }, null],

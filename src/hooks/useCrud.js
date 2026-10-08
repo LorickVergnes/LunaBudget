@@ -10,7 +10,7 @@ import { markOwnChange } from '../lib/ownChanges';
  *
  * - `emptyForm()` : valeurs d'un formulaire vide
  * - `toForm(item)` : remplit le formulaire à partir d'une ligne existante
- * - `toRow(formData)` : ligne à enregistrer (user_id et dashboard_id sont ajoutés ici)
+ * - `toRow(formData, { isEditing })` : ligne à enregistrer (user_id et dashboard_id sont ajoutés ici)
  * - `messages` : { created, updated }
  * - `refresh`, `setLoading` : viennent de useDashboardFetch
  */
@@ -45,7 +45,7 @@ export function useCrudForm({ table, emptyForm, toForm, toRow, messages, refresh
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const row = { ...toRow(formData), user_id: user.id, dashboard_id: activeDashboard.id };
+    const row = { ...toRow(formData, { isEditing: Boolean(editingId) }), user_id: user.id, dashboard_id: activeDashboard.id };
     if (editingId) markOwnChange(editingId);
     const { error } = editingId
       ? await supabase.from(table).update(row).eq('id', editingId)

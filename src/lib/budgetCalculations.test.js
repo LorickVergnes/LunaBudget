@@ -95,7 +95,7 @@ describe('computeMonthTotals', () => {
     expenses: [{ amount: '250.00', date: '2026-10-06' }, { amount: '200.00', date: '2026-10-27' }],
     envelopes: [{ max_amount: '400.00' }],
     envelopeExpenses: [{ amount: '35.20', date: '2026-10-10' }, { amount: '12.30', date: '2026-10-20' }],
-    savings: [{ target_amount: '100.00' }],
+    savings: [{ monthly_amount: '100.00' }],
     savingEntries: [{ amount: '50.00', date: '2026-10-02' }],
   };
 

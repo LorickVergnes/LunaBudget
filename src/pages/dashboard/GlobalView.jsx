@@ -4,6 +4,7 @@ import { useMonth } from '../../contexts/MonthContext';
 import { useDashboardFetch } from '../../hooks/useDashboardFetch';
 import { formatMonthDate, getTodayStr, addMonths } from '../../lib/dateUtils';
 import { computeMonthTotals } from '../../lib/budgetCalculations';
+import { filterActiveGoals } from '../../lib/savingsGoals';
 import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import TopBar from '../../components/layout/TopBar';
@@ -31,7 +32,7 @@ const GlobalView = () => {
             supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
             supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
             supabase.from('envelopes').select('max_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
-            supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+            supabase.from('savings').select('monthly_amount, start_month, end_month').eq('dashboard_id', dashboardId),
             supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
         ]);
 
@@ -43,7 +44,7 @@ const GlobalView = () => {
                 {
                     incomes: ofMonth(allInc), expenses: ofMonth(allExp),
                     envelopes: ofMonth(allEnvs), envelopeExpenses: ofMonth(allEnvExp),
-                    savings: ofMonth(allSav), savingEntries: ofMonth(allSavEntries)
+                    savings: filterActiveGoals(allSav, monthStr), savingEntries: ofMonth(allSavEntries)
                 },
                 monthStatus,
                 todayStr
@@ -68,7 +69,7 @@ const GlobalView = () => {
         const allMonths = [...new Set([
             ...(allInc||[]).map(x => x.month_date),
             ...(allExp||[]).map(x => x.month_date),
-            ...(allSav||[]).map(x => x.month_date)
+            ...(allSavEntries||[]).map(x => x.month_date)
         ])].sort();
 
         let totalIncomesSum = 0;

@@ -4,18 +4,18 @@ import { useMonth } from '../../contexts/MonthContext';
 import { useDashboardFetch } from '../../hooks/useDashboardFetch';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
-import { formatMonthDate, getTodayStr } from '../../lib/dateUtils';
-import { getMonthStatus, filterRealized, sumAmounts, roundToCents } from '../../lib/budgetCalculations';
+import { formatMonthDate } from '../../lib/dateUtils';
+import { sumAmounts, roundToCents } from '../../lib/budgetCalculations';
+import { isGoalActive, computeGoalProgress } from '../../lib/savingsGoals';
 import { formatEuro as fmt } from '../../lib/format';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { recurrenceService } from '../../services/recurrenceService';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
-import { FormCard, AmountInput, TextField, CheckboxCard, SubmitButton } from '../../components/ui/FormUI';
+import { FormCard, AmountInput, TextField, NumberField, MonthField, SubmitButton } from '../../components/ui/FormUI';
 import { ProgressLinear, SingleDonut } from '../../components/ui/Gauges';
 import IconSelector from '../../components/ui/IconSelector';
 import IconBubble from '../../components/ui/IconBubble';
@@ -28,24 +28,17 @@ const Savings = () => {
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useMonth();
   const isDesktop = useDesktop();
-  const [savings, setSavings] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const monthStr = formatMonthDate(selectedDate);
 
+  // Tous les objectifs du dashboard avec leurs versements : changer de mois ne recharge rien
   const load = useCallback(async (dashboardId) => {
-    await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
-    const { data: savs } = await supabase.from('savings')
-      .select('*, saving_entries(amount, date)')
+    const { data } = await supabase.from('savings')
+      .select('*, saving_entries(amount, date, month_date)')
       .eq('dashboard_id', dashboardId)
-      .eq('month_date', formatMonthDate(selectedDate))
-      .eq('is_hidden', false);
-
-    const todayStr = getTodayStr();
-    const monthStatus = getMonthStatus(selectedDate);
-
-    setSavings((savs || []).map(s => ({
-      ...s,
-      currentReal: sumAmounts(filterRealized(s.saving_entries, monthStatus, todayStr))
-    })));
-  }, [selectedDate]);
+      .order('created_at', { ascending: true });
+    setGoals(data || []);
+  }, []);
 
   const { loading, setLoading, refresh } = useDashboardFetch(load);
 
@@ -57,19 +50,31 @@ const Savings = () => {
   // On écoute aussi les versements pour mettre à jour la jauge de l'épargne parente
   useRealtimeSync('saving_entries', {
     onChange: refresh,
+    allMonths: true,
     message: (_name, verb) => `Un versement a été ${verb} sur un objectif`,
   });
 
   const form = useCrudForm({
     table: 'savings',
-    emptyForm: () => ({ name: '', target_amount: '', icon: 'PiggyBank', color: '#F9A825', is_recurrent: false, max_month: '' }),
-    toForm: (s) => ({ name: s.name, target_amount: s.target_amount.toString(), icon: s.icon || 'PiggyBank', color: s.color || '#F9A825', is_recurrent: s.is_recurrent, max_month: s.max_month ? s.max_month.substring(0, 7) : '' }),
-    toRow: (formData) => ({
-      ...formData,
-      target_amount: roundToCents(formData.target_amount),
-      month_date: formatMonthDate(selectedDate),
-      // La date de fin ne vaut que pour un objectif récurrent ; le champ donne "AAAA-MM"
-      max_month: formData.is_recurrent && formData.max_month ? `${formData.max_month}-01` : null,
+    emptyForm: () => ({ name: '', monthly_amount: '', goal_amount: '', end_month: '', icon: 'PiggyBank', color: '#F9A825' }),
+    toForm: (s) => ({
+      name: s.name,
+      monthly_amount: s.monthly_amount.toString(),
+      goal_amount: s.goal_amount != null ? s.goal_amount.toString() : '',
+      end_month: s.end_month ? s.end_month.substring(0, 7) : '',
+      icon: s.icon || 'PiggyBank',
+      color: s.color || '#F9A825',
+    }),
+    toRow: (formData, { isEditing }) => ({
+      name: formData.name,
+      icon: formData.icon,
+      color: formData.color,
+      monthly_amount: roundToCents(formData.monthly_amount),
+      goal_amount: formData.goal_amount ? roundToCents(formData.goal_amount) : null,
+      // Le champ donne "AAAA-MM"
+      end_month: formData.end_month ? `${formData.end_month}-01` : null,
+      // Le premier mois est fixé à la création et ne change plus ensuite
+      ...(isEditing ? {} : { start_month: monthStr }),
     }),
     messages: { created: 'Objectif créé avec succès', updated: 'Objectif modifié avec succès' },
     refresh,
@@ -79,27 +84,31 @@ const Savings = () => {
 
   const deletion = useDeleteFlow({
     table: 'savings',
-    messages: { deleted: 'Objectif supprimé', hidden: 'Objectif masqué pour ce mois' },
+    messages: { deleted: 'Objectif supprimé' },
     refresh,
   });
 
-  const totalTarget = sumAmounts(savings, 'target_amount');
-  const totalSaved = sumAmounts(savings, 'currentReal');
+  // Avancement de chaque objectif vu depuis le mois affiché
+  const startedGoals = goals
+    .filter(goal => goal.start_month <= monthStr)
+    .map(goal => ({ ...goal, progress: computeGoalProgress(goal, goal.saving_entries, monthStr) }));
+  const savings = startedGoals.filter(goal => isGoalActive(goal, monthStr));
+
+  // Le patrimoine compte aussi les objectifs terminés : l'argent est toujours épargné
+  const totalSaved = sumAmounts(startedGoals.map(goal => goal.progress), 'savedTotal');
+  const savedThisMonth = sumAmounts(savings.map(goal => goal.progress), 'savedThisMonth');
+  const plannedThisMonth = sumAmounts(savings, 'monthly_amount');
 
   const modalForm = (
     <BottomModal isOpen={form.showForm} onClose={form.resetForm} title={form.editingId ? "Modifier l'objectif" : "Nouvel objectif"}>
       <form onSubmit={form.submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <AmountInput value={formData.target_amount} onChange={e => setField('target_amount', e.target.value)} color="#9CA3AF" />
+        <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', textAlign: 'center' }}>Versement prévu chaque mois</label>
+        <AmountInput value={formData.monthly_amount} onChange={e => setField('monthly_amount', e.target.value)} color="#9CA3AF" />
         <TextField label="Nom" placeholder="Voyage, Voiture, Urgences..." value={formData.name} onChange={e => setField('name', e.target.value)} />
-        <CheckboxCard label="Objectif récurrent" text="Créer chaque mois" checked={formData.is_recurrent} onToggle={() => setField('is_recurrent', !formData.is_recurrent)} />
-        {formData.is_recurrent && (
-          <FormCard>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#4A6984', display: 'block', marginBottom: 4 }}>Date de fin (Optionnel)</label>
-            <span style={{ fontSize: 12, color: '#9CA3AF', display: 'block', marginBottom: 8 }}>Mois et année finaux d'application pour cet objectif.</span>
-            <input type="month" value={formData.max_month} onChange={e => setField('max_month', e.target.value)}
-              style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 15, color: '#4B5563' }} />
-          </FormCard>
-        )}
+        <NumberField label="Montant à atteindre (optionnel)" hint="Le total visé, tous mois confondus. Laissez vide pour une épargne régulière sans plafond."
+          placeholder="Ex : 2000" value={formData.goal_amount} onChange={e => setField('goal_amount', e.target.value)} />
+        <MonthField label="Dernier mois (optionnel)" hint="L'objectif n'apparaît plus après ce mois. Laissez vide s'il n'a pas de fin."
+          min={monthStr.substring(0, 7)} value={formData.end_month} onChange={e => setField('end_month', e.target.value)} />
         <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
         <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
         <SubmitButton loading={loading}>{form.editingId ? 'Enregistrer' : "Créer l'objectif"}</SubmitButton>
@@ -109,18 +118,19 @@ const Savings = () => {
 
   const deleteModal = (
     <DeleteConfirmationModal {...deletion.modalProps}
-      title={deletion.target?.is_recurrent ? "Objectif récurrent" : "Supprimer cet objectif ?"}
-      message={deletion.target?.is_recurrent
-        ? "Cet objectif est récurrent. Voulez-vous le supprimer définitivement ou seulement pour ce mois-ci ?"
-        : "Voulez-vous vraiment supprimer cet objectif d'épargne ? Toutes les entrées liées seront également supprimées."} />
+      title="Supprimer cet objectif ?"
+      message="Voulez-vous vraiment supprimer cet objectif d'épargne ? Tous ses versements, tous mois confondus, seront également supprimés. Pour seulement l'arrêter, modifiez plutôt son dernier mois." />
   );
 
   const SavingCard = ({ s, i }) => {
-    const target = parseFloat(s.target_amount);
-    const current = s.currentReal;
-    const pct = Math.round((current / Math.max(target, 1)) * 100);
-    const remaining = Math.max(target - current, 0);
-    const over = current >= target;
+    const { target, current, remaining, goalAmount, savedTotal, savedThisMonth, monthlyAmount, requiredMonthly } = s.progress;
+    const pct = s.progress.percent;
+    const over = s.progress.reached;
+    // Avec un montant à atteindre, la jauge suit le cumul ; sinon elle suit le versement du mois
+    const hasGoal = goalAmount !== null;
+    const info = hasGoal
+      ? `Ce mois : ${fmt(savedThisMonth)} sur ${fmt(monthlyAmount)} prévus${requiredMonthly ? ` · ${fmt(requiredMonthly)} / mois pour tenir l'échéance` : ''}`
+      : `Total épargné : ${fmt(savedTotal)}`;
 
     if (isDesktop) {
       return (
@@ -142,17 +152,19 @@ const Savings = () => {
             <SingleDonut value={current} max={target} size={100} stroke={10} color={s.color || '#F9A825'} label={`${pct}%`} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div>
-                <div style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 700 }}>ACTUEL</div>
+                <div style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 700 }}>{hasGoal ? 'ÉPARGNÉ' : 'CE MOIS'}</div>
                 <div style={{ fontWeight: 800, color: '#4A6984' }}>{fmt(current)}</div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 700 }}>OBJECTIF</div>
+                <div style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 700 }}>{hasGoal ? 'OBJECTIF' : 'PRÉVU'}</div>
                 <div style={{ fontWeight: 800, color: '#4A6984' }}>{fmt(target)}</div>
               </div>
             </div>
           </div>
 
           <ProgressLinear value={current} max={target} color={s.color || '#F9A825'} height={10} />
+
+          <div style={{ fontSize: 12, color: '#B0B8C9', fontWeight: 600 }}>{info}</div>
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -219,6 +231,7 @@ const Savings = () => {
         <div style={{ marginTop: 6 }}>
           <ProgressLinear value={current} max={target} color={s.color || '#F9A825'} height={10} />
         </div>
+        <div style={{ fontSize: 11, color: '#B0B8C9', fontWeight: 600, marginTop: 8 }}>{info}</div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button
@@ -287,7 +300,7 @@ const Savings = () => {
                   </div>
                   <div style={{ fontSize: 36, fontWeight: 900, marginTop: 4 }}>{fmt(totalSaved)}</div>
                   <div style={{ fontSize: 14, opacity: .9, fontWeight: 600, marginTop: 4 }}>
-                    Objectif total : {fmt(totalTarget)}
+                    Ce mois : {fmt(savedThisMonth)} versés sur {fmt(plannedThisMonth)} prévus
                   </div>
                 </div>
               </div>
@@ -327,7 +340,7 @@ const Savings = () => {
               </div>
               <div style={{ fontSize: 28, fontWeight: 900, marginTop: 4 }}>{fmt(totalSaved)}</div>
               <div style={{ fontSize: 12, opacity: .9, fontWeight: 600, marginTop: 4 }}>
-                Objectif total : {fmt(totalTarget)}
+                Ce mois : {fmt(savedThisMonth)} versés sur {fmt(plannedThisMonth)} prévus
               </div>
             </div>
 

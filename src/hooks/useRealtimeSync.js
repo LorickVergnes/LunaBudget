@@ -15,10 +15,11 @@ const VERBS = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
  * - `message`   : (nom, verbe) => texte de la notification, ex. « Loyer a été modifiée par un collaborateur »
  * - `feminine`  : accorde le verbe (« ajoutée »)
  * - `accept`    : filtre supplémentaire sur la ligne reçue (ex. la bonne enveloppe)
+ * - `allMonths` : réagit aussi aux changements des autres mois (données cumulées, comme l'épargne)
  *
- * Les changements des autres mois sont ignorés, et nos propres actions ne sont pas notifiées.
+ * Par défaut les changements des autres mois sont ignorés. Nos propres actions ne sont jamais notifiées.
  */
-export function useRealtimeSync(table, { onChange, message, feminine = false, accept }) {
+export function useRealtimeSync(table, { onChange, message, feminine = false, accept, allMonths = false }) {
   const { user } = useAuth();
   const { activeDashboard } = useDashboard();
   const { selectedDate } = useMonth();
@@ -26,7 +27,7 @@ export function useRealtimeSync(table, { onChange, message, feminine = false, ac
 
   useRealtimeTable(table, activeDashboard?.id, (eventType, newRecord, oldRecord) => {
     const record = newRecord || oldRecord;
-    if (record?.month_date && record.month_date !== formatMonthDate(selectedDate)) return;
+    if (!allMonths && record?.month_date && record.month_date !== formatMonthDate(selectedDate)) return;
     if (accept && !accept(record)) return;
 
     onChange();

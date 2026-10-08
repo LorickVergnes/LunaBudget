@@ -13,6 +13,8 @@ const CONFIG = {
   totalColor: '#22c55e',
   totalPrefix: '+',
   hasName: false,
+  // Les versements d'un objectif se cumulent : la liste couvre tous les mois
+  allMonths: true,
   extraRow: {},
   texts: {
     headerLabel: 'Versements',

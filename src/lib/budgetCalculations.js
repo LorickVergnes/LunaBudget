@@ -40,7 +40,8 @@ export const computeBalance = ({ income, fixedExp, envExp, savings }) =>
 
 /**
  * Totaux d'un mois, en réel et en prévu.
- * En prévu, les enveloppes comptent pour leur plafond et l'épargne pour son objectif ;
+ * En prévu, les enveloppes comptent pour leur plafond et l'épargne pour le versement mensuel
+ * de chaque objectif (`savings` = les objectifs en cours ce mois-là) ;
  * en réel, on compte ce qui a effectivement été dépensé / versé.
  */
 export const computeMonthTotals = (
@@ -58,7 +59,7 @@ export const computeMonthTotals = (
     income: sumAmounts(incomes),
     fixedExp: sumAmounts(expenses),
     envExp: sumAmounts(envelopes, 'max_amount'),
-    savings: sumAmounts(savings, 'target_amount'),
+    savings: sumAmounts(savings, 'monthly_amount'),
   },
 });
 

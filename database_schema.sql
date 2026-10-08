@@ -75,19 +75,20 @@ create table incomes (
 );
 
 -- 6. ÉPARGNE (Objectifs)
+-- Un objectif existe une seule fois ; ses versements (saving_entries) se cumulent d'un mois à l'autre.
 create table savings (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references profiles(id) on delete cascade not null,
   dashboard_id uuid references dashboards(id) on delete cascade not null,
   name text not null,
-  is_recurrent boolean default false,
-  is_hidden boolean default false,
   icon text default 'PiggyBank',
   color text default '#8b5cf6',
-  target_amount numeric(12, 2) not null default 0,
-  month_date date not null,
-  max_month date,
-  created_at timestamp with time zone default now()
+  monthly_amount numeric(12, 2) not null default 0, -- Versement prévu chaque mois
+  goal_amount numeric(12, 2),                       -- Montant total à atteindre (optionnel)
+  start_month date not null,                        -- Premier mois de l'objectif
+  end_month date,                                   -- Dernier mois de l'objectif (optionnel)
+  created_at timestamp with time zone default now(),
+  constraint savings_end_after_start check (end_month is null or end_month >= start_month)
 );
 
 -- 7. DÉPENSES FIXES
@@ -270,25 +271,6 @@ begin
   )
   insert into public.recurrence_logs (user_id, dashboard_id, table_name, source_item_id, target_month)
   select s.user_id, dash_id, 'envelopes', s.id, cur_month from src s
-  on conflict do nothing;
-
-  -- Épargne (s'arrête après max_month s'il est défini)
-  with src as (
-    select sv.* from public.savings sv
-    where sv.dashboard_id = dash_id and sv.month_date = prev_month and sv.is_recurrent
-    and (sv.max_month is null or cur_month <= sv.max_month)
-    and not exists (
-      select 1 from public.recurrence_logs l
-      where l.dashboard_id = dash_id and l.table_name = 'savings'
-      and l.source_item_id = sv.id and l.target_month = cur_month
-    )
-  ), ins as (
-    insert into public.savings (user_id, dashboard_id, name, is_recurrent, is_hidden, icon, color, target_amount, month_date, max_month)
-    select s.user_id, s.dashboard_id, s.name, true, false, s.icon, s.color, s.target_amount, cur_month, s.max_month
-    from src s
-  )
-  insert into public.recurrence_logs (user_id, dashboard_id, table_name, source_item_id, target_month)
-  select s.user_id, dash_id, 'savings', s.id, cur_month from src s
   on conflict do nothing;
 end;
 $$ language plpgsql security definer set search_path = '';

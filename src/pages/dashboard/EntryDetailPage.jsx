@@ -49,6 +49,7 @@ const EntryDetailPage = ({ config }) => {
     onChange: refresh,
     feminine: texts.feminine,
     message: texts.realtimeMessage,
+    allMonths: config.allMonths,
     // Uniquement les lignes de ce parent
     accept: (record) => !(record?.[parentKey] && record[parentKey] !== id),
   });

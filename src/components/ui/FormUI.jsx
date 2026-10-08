@@ -67,6 +67,24 @@ export const DateField = ({ value, onChange }) => (
   </FormCard>
 );
 
+// NumberField: montant facultatif avec son libellé
+export const NumberField = ({ label, hint, value, onChange, placeholder }) => (
+  <FormCard>
+    <label style={labelStyle(4)}>{label}</label>
+    {hint && <span style={{ fontSize: 12, color: '#9CA3AF', display: 'block', marginBottom: 8 }}>{hint}</span>}
+    <input type="number" step="0.01" min="0" placeholder={placeholder} value={value} onChange={onChange} className="no-spinners" style={inputStyle} />
+  </FormCard>
+);
+
+// MonthField: mois facultatif (AAAA-MM) avec son libellé
+export const MonthField = ({ label, hint, value, onChange, min }) => (
+  <FormCard>
+    <label style={labelStyle(4)}>{label}</label>
+    {hint && <span style={{ fontSize: 12, color: '#9CA3AF', display: 'block', marginBottom: 8 }}>{hint}</span>}
+    <input type="month" min={min} value={value} onChange={onChange} style={inputStyle} />
+  </FormCard>
+);
+
 // CheckboxCard: carte cliquable avec une case à cocher (ex. "récurrent")
 export const CheckboxCard = ({ label, text, checked, onToggle }) => (
   <FormCard style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={onToggle}>

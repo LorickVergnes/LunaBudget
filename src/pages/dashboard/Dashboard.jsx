@@ -8,6 +8,7 @@ import {
   getMonthStatus, filterRealized, sumAmounts, computeBalance, computeMonthTotals,
   getDaysLeftInMonth, getDaysInMonth
 } from '../../lib/budgetCalculations';
+import { filterActiveGoals } from '../../lib/savingsGoals';
 import { useNavigate } from 'react-router-dom';
 import { recurrenceService } from '../../services/recurrenceService';
 import MonthSelector from '../../components/layout/MonthSelector';
@@ -90,7 +91,7 @@ const Dashboard = () => {
       supabase.from('expenses').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
       supabase.from('envelope_expenses').select('id, amount, date, name, icon, color, envelope_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
       supabase.from('envelopes').select('id, name, max_amount, icon, color').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
-      supabase.from('savings').select('target_amount, month_date').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+      supabase.from('savings').select('monthly_amount, start_month, end_month').eq('dashboard_id', dashboardId),
       supabase.from('saving_entries').select('id, amount, date, savings(name, icon, color)').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
     ]);
 
@@ -98,7 +99,7 @@ const Dashboard = () => {
     const monthStatus = getMonthStatus(selectedDate);
 
     const { real, forecast } = computeMonthTotals(
-      { incomes: inc, expenses: exp, envelopes: envs, envelopeExpenses: envExp, savings: sav, savingEntries: savEntries },
+      { incomes: inc, expenses: exp, envelopes: envs, envelopeExpenses: envExp, savings: filterActiveGoals(sav, monthStr), savingEntries: savEntries },
       monthStatus,
       todayStr
     );
