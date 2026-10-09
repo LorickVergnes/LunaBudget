@@ -3,6 +3,7 @@ import OperationsPage from './OperationsPage';
 
 const CONFIG = {
   table: 'incomes',
+  kind: 'income',
   accent: '#A0D2EB',
   defaultIcon: 'Briefcase',
   recurrentIconColor: '#E5BA73',
@@ -18,13 +19,13 @@ const CONFIG = {
     addTitle: 'Ajouter un revenu',
     editTitle: 'Modifier le revenu',
     namePlaceholder: 'Nom de mon revenu',
-    recurrentText: 'Revenu récurrent',
     deleteTitle: 'Supprimer ce revenu ?',
     deleteMessage: 'Voulez-vous vraiment supprimer ce revenu ? Cette action est définitive.',
-    deleteRecurrentMessage: 'Ce revenu est récurrent. Voulez-vous le supprimer définitivement ou seulement pour ce mois-ci ?',
+    deleteRecurrentMessage: '« Supprimer ce mois uniquement » le retire de ce mois. « Arrêter la récurrence » le supprime de ce mois et des mois suivants.',
     created: 'Revenu ajouté avec succès',
     updated: 'Revenu modifié avec succès',
     deleted: 'Revenu supprimé',
+    stopped: 'Récurrence arrêtée',
     hidden: 'Revenu masqué pour ce mois',
     realtimeFallbackName: 'Un revenu',
     feminine: false,

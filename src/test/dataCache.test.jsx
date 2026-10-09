@@ -164,7 +164,7 @@ describe('cache des données', () => {
     expect(isLoading()).toBe(false);
     expect(text()).toContain('Salaire');
     await settle();
-    expect(reads('incomes | * | dashboard_id=d1 & is_hidden=false & month_date=2026-10-01')).toBe(1);
+    expect(reads('incomes | *, recurrence:recurrences(interval_months, end_month) | dashboard_id=d1 & is_hidden=false & month_date=2026-10-01')).toBe(1);
     expect(recurrenceCalls(OCT)).toBe(1);
   });
 

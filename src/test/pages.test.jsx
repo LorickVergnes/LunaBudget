@@ -131,7 +131,8 @@ describe('rendu des pages', () => {
         snapshot(`${key}/add-filled`);
         await submitForm();
         snapshot(`${key}/add-submitted`);
-        expect(results[`${key}/add-submitted`].ops.some(o => o.op === 'insert')).toBe(true);
+        // Un élément récurrent est créé par sa règle, les autres par une insertion directe
+        expect(results[`${key}/add-submitted`].ops.some(o => o.op === 'insert' || o.op === 'create_recurrence')).toBe(true);
       });
 
       it(`${key} : modification`, async () => {

@@ -61,6 +61,16 @@ export const DATA = {
   saving_entries: savingEntries,
 };
 
+// Chaque ligne récurrente pointe vers sa règle, jointe sous `recurrence` comme le fait l'API.
+// Les règles sont mensuelles et sans fin, sauf « Essence » (tous les 3 mois, jusqu'en juillet 2027).
+const RULES = { exp3: { interval_months: 3, end_month: '2027-07-01' } };
+for (const table of ['incomes', 'expenses', 'envelopes']) {
+  for (const row of DATA[table]) {
+    row.recurrence_id = row.is_recurrent ? `rule-${row.id}` : null;
+    row.recurrence = row.is_recurrent ? (RULES[row.id] ?? { interval_months: 1, end_month: null }) : null;
+  }
+}
+
 export const log = { ops: [], reads: [] };
 let listeners = [];
 
@@ -155,6 +165,11 @@ export const supabase = {
     if (name === 'create_dashboard') {
       log.ops.push({ table: 'rpc', op: name, payload: sortKeys(args), filters: [] });
       return { data: 'new1', error: null };
+    }
+    // Écritures sur une règle de récurrence
+    if (name === 'create_recurrence' || name === 'update_recurrence_from' || name === 'stop_recurrence') {
+      log.ops.push({ table: 'rpc', op: name, payload: sortKeys(args), filters: [] });
+      return { data: name === 'stop_recurrence' ? null : 'rule-new', error: null };
     }
     // Les fonctions qui modifient la base sont enregistrées comme des écritures
     if (name === 'accept_invitation' || name === 'decline_invitation') {

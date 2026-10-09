@@ -3,6 +3,7 @@ import OperationsPage from './OperationsPage';
 
 const CONFIG = {
   table: 'expenses',
+  kind: 'expense',
   accent: '#E5BA73',
   defaultIcon: 'Home',
   recurrentIconColor: '#A0D2EB',
@@ -18,13 +19,13 @@ const CONFIG = {
     addTitle: 'Ajouter une dépense fixe',
     editTitle: 'Modifier la dépense fixe',
     namePlaceholder: 'Loyer, Netflix, EDF...',
-    recurrentText: 'Dépense récurrente',
     deleteTitle: 'Supprimer cette dépense ?',
     deleteMessage: 'Voulez-vous vraiment supprimer cette dépense fixe ? Cette action est définitive.',
-    deleteRecurrentMessage: 'Cette dépense est récurrente. Voulez-vous la supprimer définitivement ou seulement pour ce mois-ci ?',
+    deleteRecurrentMessage: '« Supprimer ce mois uniquement » la retire de ce mois. « Arrêter la récurrence » la supprime de ce mois et des mois suivants.',
     created: 'Dépense ajoutée avec succès',
     updated: 'Dépense modifiée avec succès',
     deleted: 'Dépense supprimée',
+    stopped: 'Récurrence arrêtée',
     hidden: 'Dépense masquée pour ce mois',
     realtimeFallbackName: 'Une dépense fixe',
     feminine: true,

@@ -38,9 +38,9 @@ export function useRealtimeSync(table, { onChange, message, feminine = false, ac
     onChange();
 
     // Pas de notification pour un ajout fait par moi sur un autre appareil,
-    // ni pour les copies de récurrence que je viens de déclencher en ouvrant le mois.
+    // ni pour les lignes récurrentes que je viens de faire créer en ouvrant le mois.
     const isMine = eventType === 'INSERT'
-      && (newRecord?.user_id === user?.id || (newRecord?.is_recurrent && isRecurrenceRecent()));
+      && (newRecord?.user_id === user?.id || (newRecord?.recurrence_id && isRecurrenceRecent()));
     if (isMine) return;
 
     const verb = (VERBS[eventType] || VERBS.UPDATE) + (feminine ? 'e' : '');

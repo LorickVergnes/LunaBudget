@@ -85,6 +85,17 @@ export const MonthField = ({ label, hint, value, onChange, min }) => (
   </FormCard>
 );
 
+// SelectField: liste de choix ({ value, label }) avec son libellé
+export const SelectField = ({ label, hint, value, onChange, options }) => (
+  <FormCard>
+    <label style={labelStyle(4)}>{label}</label>
+    {hint && <span style={{ fontSize: 12, color: '#9CA3AF', display: 'block', marginBottom: 8 }}>{hint}</span>}
+    <select aria-label={label} value={value} onChange={onChange} style={{ ...inputStyle, cursor: 'pointer' }}>
+      {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+  </FormCard>
+);
+
 // CheckboxCard: carte cliquable avec une case à cocher (ex. "récurrent")
 export const CheckboxCard = ({ label, text, checked, onToggle }) => (
   <FormCard style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={onToggle}>

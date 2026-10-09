@@ -16,7 +16,9 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import LoadError from '../../components/ui/LoadError';
 import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
-import { FormCard, AmountInput, TextField, CheckboxCard, SubmitButton } from '../../components/ui/FormUI';
+import { FormCard, AmountInput, TextField, SubmitButton } from '../../components/ui/FormUI';
+import RecurrenceFields from '../../components/ui/RecurrenceFields';
+import { isRecurrent, emptyRecurrenceForm, recurrenceFormOf } from '../../lib/recurrence';
 import { ProgressLinear, SingleDonut } from '../../components/ui/Gauges';
 import IconSelector from '../../components/ui/IconSelector';
 import IconBubble from '../../components/ui/IconBubble';
@@ -35,7 +37,7 @@ const Envelopes = () => {
   const { data: envelopes = [], loading, error, retry, refresh } = useDashboardQuery('envelopes', [month], async (dashboardId, { applyRecurrence }) => {
     await applyRecurrence(selectedDate);
     const { data: envs, error } = await supabase.from('envelopes')
-      .select('*, envelope_expenses(amount, date)')
+      .select('*, envelope_expenses(amount, date), recurrence:recurrences(interval_months, end_month)')
       .eq('dashboard_id', dashboardId)
       .eq('month_date', month)
       .eq('is_hidden', false);
@@ -65,18 +67,22 @@ const Envelopes = () => {
 
   const form = useCrudForm({
     table: 'envelopes',
-    emptyForm: () => ({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false }),
-    toForm: (env) => ({ name: env.name, max_amount: env.max_amount.toString(), icon: env.icon || 'Wallet', color: env.color || ACCENT, is_recurrent: env.is_recurrent }),
+    emptyForm: () => ({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, ...emptyRecurrenceForm() }),
+    toForm: (env) => ({ name: env.name, max_amount: env.max_amount.toString(), icon: env.icon || 'Wallet', color: env.color || ACCENT, ...recurrenceFormOf(env) }),
     // Le mois est fixé à la création : modifier une enveloppe ne la change pas de mois
     toRow: (formData, { isEditing }) => ({ ...formData, max_amount: roundToCents(formData.max_amount), ...(isEditing ? {} : { month_date: month }) }),
     messages: { created: 'Enveloppe créée avec succès', updated: 'Enveloppe modifiée avec succès' },
     refresh,
+    recurrence: {
+      kind: 'envelope',
+      toRule: (formData) => ({ name: formData.name, amount: roundToCents(formData.max_amount), day: 1, icon: formData.icon, color: formData.color, month }),
+    },
   });
   const { formData, setField } = form;
 
   const deletion = useDeleteFlow({
     table: 'envelopes',
-    messages: { deleted: 'Enveloppe supprimée', hidden: 'Enveloppe masquée pour ce mois' },
+    messages: { deleted: 'Enveloppe supprimée', hidden: 'Enveloppe masquée pour ce mois', stopped: 'Récurrence arrêtée' },
     refresh,
   });
 
@@ -89,7 +95,8 @@ const Envelopes = () => {
       <form onSubmit={form.submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <AmountInput value={formData.max_amount} onChange={e => setField('max_amount', e.target.value)} color="#9CA3AF" />
         <TextField label="Nom" placeholder="Alimentation, Loisirs..." value={formData.name} onChange={e => setField('name', e.target.value)} />
-        <CheckboxCard label="Reporter chaque mois" text="Enveloppe récurrente" checked={formData.is_recurrent} onToggle={() => setField('is_recurrent', !formData.is_recurrent)} />
+        <RecurrenceFields formData={formData} setField={setField} editingRecurrent={isRecurrent(form.editingItem)} month={month}
+          monthlyOnly checkbox={{ label: 'Reporter chaque mois', text: 'Enveloppe récurrente' }} />
         <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
         <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
         <SubmitButton loading={form.saving}>{form.editingId ? 'Enregistrer' : "Créer l'enveloppe"}</SubmitButton>
@@ -99,9 +106,9 @@ const Envelopes = () => {
 
   const deleteModal = (
     <DeleteConfirmationModal {...deletion.modalProps}
-      title={deletion.target?.is_recurrent ? "Enveloppe récurrente" : "Supprimer cette enveloppe ?"}
-      message={deletion.target?.is_recurrent
-        ? "Cette enveloppe est récurrente. Voulez-vous la supprimer définitivement ou seulement pour ce mois-ci ?"
+      title={isRecurrent(deletion.target) ? "Enveloppe récurrente" : "Supprimer cette enveloppe ?"}
+      message={isRecurrent(deletion.target)
+        ? "« Supprimer ce mois uniquement » la retire de ce mois. « Arrêter la récurrence » la supprime de ce mois, avec ses dépenses, et des mois suivants ; une enveloppe d'un mois suivant qui contient déjà des dépenses est conservée."
         : "Voulez-vous vraiment supprimer cette enveloppe ? Toutes les dépenses liées seront également supprimées."} />
   );
 

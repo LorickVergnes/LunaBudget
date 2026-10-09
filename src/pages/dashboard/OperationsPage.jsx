@@ -11,7 +11,9 @@ import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
-import { FormCard, AmountInput, TextField, DateField, CheckboxCard, SubmitButton } from '../../components/ui/FormUI';
+import { FormCard, AmountInput, TextField, DateField, SubmitButton } from '../../components/ui/FormUI';
+import RecurrenceFields from '../../components/ui/RecurrenceFields';
+import { isRecurrent, repeatLabel, emptyRecurrenceForm, recurrenceFormOf } from '../../lib/recurrence';
 import IconSelector from '../../components/ui/IconSelector';
 import { getIconComponent } from '../../lib/iconRegistry';
 import DonutChart from '../../components/ui/DonutChart';
@@ -47,7 +49,11 @@ const OperationItem = ({ item, index, config, isUpcoming, showForecast, canEdit,
         </p>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {item.is_recurrent && <RotateCw size={12} style={{ color: config.recurrentIconColor }} />}
+        {isRecurrent(item) && (
+          <span title={repeatLabel(item.recurrence?.interval_months ?? 1)} style={{ display: 'flex' }}>
+            <RotateCw size={12} aria-label={repeatLabel(item.recurrence?.interval_months ?? 1)} style={{ color: config.recurrentIconColor }} />
+          </span>
+        )}
         {canEdit && <button
           onClick={onEdit}
           style={{
@@ -85,7 +91,8 @@ const OperationsPage = ({ config }) => {
 
   const { data: items = [], loading, error, retry, refresh } = useDashboardQuery(table, [month], async (dashboardId, { applyRecurrence }) => {
     await applyRecurrence(selectedDate);
-    const { data, error } = await supabase.from(table).select('*')
+    // Chaque ligne récurrente arrive avec le rythme et la fin de sa règle
+    const { data, error } = await supabase.from(table).select('*, recurrence:recurrences(interval_months, end_month)')
       .eq('dashboard_id', dashboardId)
       .eq('month_date', month)
       .eq('is_hidden', false)
@@ -102,16 +109,24 @@ const OperationsPage = ({ config }) => {
 
   const form = useCrudForm({
     table,
-    emptyForm: () => ({ name: '', amount: '', date: defaultDateInMonth(month), is_recurrent: false, icon: config.defaultIcon, color: accent }),
-    toForm: (item) => ({ name: item.name, amount: item.amount.toString(), date: item.date.split('T')[0], is_recurrent: item.is_recurrent, icon: item.icon || config.defaultIcon, color: item.color || accent }),
+    emptyForm: () => ({ name: '', amount: '', date: defaultDateInMonth(month), icon: config.defaultIcon, color: accent, ...emptyRecurrenceForm() }),
+    toForm: (item) => ({ name: item.name, amount: item.amount.toString(), date: item.date.split('T')[0], icon: item.icon || config.defaultIcon, color: item.color || accent, ...recurrenceFormOf(item) }),
     // Le mois de l'opération vient de sa date (le champ date est limité au mois affiché)
     toRow: (formData) => ({ ...formData, amount: roundToCents(formData.amount), month_date: monthOfDateStr(formData.date) }),
     messages: { created: texts.created, updated: texts.updated },
     refresh,
+    recurrence: {
+      kind: config.kind,
+      // Une règle reprend le jour de la date choisie et le reporte sur chaque mois
+      toRule: (formData) => ({
+        name: formData.name, amount: roundToCents(formData.amount), day: Number(formData.date.slice(8, 10)),
+        icon: formData.icon, color: formData.color, month: monthOfDateStr(formData.date),
+      }),
+    },
   });
   const { formData, setField } = form;
 
-  const deletion = useDeleteFlow({ table, messages: { deleted: texts.deleted, hidden: texts.hidden }, refresh });
+  const deletion = useDeleteFlow({ table, messages: { deleted: texts.deleted, hidden: texts.hidden, stopped: texts.stopped }, refresh });
 
   const todayStr = getTodayStr();
   const monthStatus = getMonthStatus(selectedDate);
@@ -133,7 +148,7 @@ const OperationsPage = ({ config }) => {
         <AmountInput value={formData.amount} onChange={e => setField('amount', e.target.value)} color="#9CA3AF" />
         <TextField label="Nom" placeholder={texts.namePlaceholder} value={formData.name} onChange={e => setField('name', e.target.value)} />
         <DateField value={formData.date} min={dateBounds.min} max={dateBounds.max} onChange={e => setField('date', e.target.value)} />
-        <CheckboxCard label="Ajouter chaque mois" text={texts.recurrentText} checked={formData.is_recurrent} onToggle={() => setField('is_recurrent', !formData.is_recurrent)} />
+        <RecurrenceFields formData={formData} setField={setField} editingRecurrent={isRecurrent(form.editingItem)} month={month} />
         <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
         <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
         <SubmitButton loading={form.saving}>{form.editingId ? 'Enregistrer' : 'Ajouter'}</SubmitButton>
@@ -144,8 +159,8 @@ const OperationsPage = ({ config }) => {
   const deleteModal = (
     <DeleteConfirmationModal
       {...deletion.modalProps}
-      title={deletion.target?.is_recurrent ? "Élément récurrent" : texts.deleteTitle}
-      message={deletion.target?.is_recurrent ? texts.deleteRecurrentMessage : texts.deleteMessage} />
+      title={isRecurrent(deletion.target) ? "Élément récurrent" : texts.deleteTitle}
+      message={isRecurrent(deletion.target) ? texts.deleteRecurrentMessage : texts.deleteMessage} />
   );
 
   const list = items.map((item, i) => (

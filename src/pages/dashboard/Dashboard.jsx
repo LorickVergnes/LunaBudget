@@ -96,8 +96,8 @@ const Dashboard = () => {
     await applyRecurrence(selectedDate);
     const monthStr = month;
     const results = await Promise.all([
-      supabase.from('incomes').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
-      supabase.from('expenses').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+      supabase.from('incomes').select('id, amount, date, name, icon, color, recurrence_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
+      supabase.from('expenses').select('id, amount, date, name, icon, color, recurrence_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
       supabase.from('envelope_expenses').select('id, amount, date, name, icon, color, envelope_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
       supabase.from('envelopes').select('id, name, max_amount, icon, color').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
       supabase.from('savings').select('monthly_amount, start_month, end_month').eq('dashboard_id', dashboardId),
@@ -322,7 +322,7 @@ const Dashboard = () => {
                   <div style={{ fontWeight: 700, color: "#4A6984", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {t.label}
                   </div>
-                  {t.is_recurrent && <Repeat size={11} style={{ color: "#A0D2EB", flexShrink: 0 }} />}
+                  {t.recurrence_id && <Repeat size={11} style={{ color: "#A0D2EB", flexShrink: 0 }} />}
                   {!t.realized && <span style={{ fontSize: 10, color: '#B7791F', fontWeight: 700, flexShrink: 0 }}>Prévu</span>}
                 </div>
                 <div style={{ fontSize: 11, color: "#B0B8C9", fontWeight: 600, marginTop: 2 }}>
