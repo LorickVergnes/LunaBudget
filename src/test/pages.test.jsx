@@ -15,10 +15,13 @@ import { createRoot } from 'react-dom/client';
 import { log, emitRealtime, listenedTables, resetMock, setMockSession, DATA, USER, OTHER_USER_ID, DASHBOARD_ID } from './supabaseMock';
 import { resetOwnChanges } from '../lib/ownChanges';
 import App from '../App';
+import { preloadPages } from '../lib/pageLoaders';
 
 vi.mock('../lib/supabaseClient', async () => ({ supabase: (await import('./supabaseMock')).supabase }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+// Les pages sont téléchargées à la demande : on les charge toutes avant de commencer
+await preloadPages();
 // Chaque parcours monte plusieurs fois l'application : on laisse de la marge sur une machine chargée
 vi.setConfig({ testTimeout: 30_000 });
 

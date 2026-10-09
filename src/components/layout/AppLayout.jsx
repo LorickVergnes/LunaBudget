@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import useDesktop from '../../hooks/useDesktop';
 import DesktopHeader from './DesktopHeader';
 import DesktopSidebar from './DesktopSidebar';
 import BottomNav from './BottomNav';
 import InvitationsModal from '../ui/InvitationsModal';
+import LoadingSpinner from '../ui/LoadingSpinner';
+import { preloadPagesWhenIdle } from '../../lib/pageLoaders';
+
+// Affiché à la place de la page pendant le téléchargement de son code (première visite uniquement)
+const pageLoader = <LoadingSpinner fullHeight />;
 
 /**
  * Cadre commun à toutes les pages connectées : la page active s'affiche dans <Outlet />.
@@ -18,6 +23,9 @@ const AppLayout = ({ mobileOnly = false }) => {
   const isDesktop = useDesktop();
   const { pathname } = useLocation();
 
+  // Une fois connecté et le premier écran affiché, les autres pages sont téléchargées en arrière-plan
+  useEffect(() => { preloadPagesWhenIdle(); }, []);
+
   if (isDesktop && !mobileOnly) {
     return (
       <div className="desktop-shell">
@@ -27,7 +35,9 @@ const AppLayout = ({ mobileOnly = false }) => {
           <DesktopSidebar key={`sidebar-${pathname}`} />
           {/* key : rejoue le fondu d'apparition du contenu à chaque changement de page */}
           <main className="desktop-main fade-in" key={pathname}>
-            <Outlet />
+            <Suspense fallback={pageLoader}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
         <InvitationsModal />
@@ -37,7 +47,9 @@ const AppLayout = ({ mobileOnly = false }) => {
 
   return (
     <>
-      <Outlet />
+      <Suspense fallback={pageLoader}>
+        <Outlet />
+      </Suspense>
       <BottomNav />
       <InvitationsModal />
     </>

@@ -1,20 +1,8 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createQueryClient } from './lib/queryClient';
-import Dashboard from './pages/dashboard/Dashboard';
-import Incomes from './pages/dashboard/Incomes';
-import Expenses from './pages/dashboard/Expenses';
-import Envelopes from './pages/dashboard/Envelopes';
-import EnvelopeDetail from './pages/dashboard/EnvelopeDetail';
-import Savings from './pages/dashboard/Savings';
-import SavingDetail from './pages/dashboard/SavingDetail';
-import GlobalView from './pages/dashboard/GlobalView';
-import Account from './pages/dashboard/Account';
-import Login from './pages/auth/Login';
-import Signup from './pages/auth/Signup';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
+import { pageLoaders } from './lib/pageLoaders';
 import { useAuth } from './hooks/useAuth';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import AppLayout from './components/layout/AppLayout';
@@ -23,6 +11,23 @@ import { AuthProvider } from './contexts/AuthContext';
 import { DashboardProvider } from './contexts/DashboardContext';
 import { ToastProvider } from './contexts/ToastContext';
 import AmbientOrbs from './components/ui/AmbientOrbs';
+
+// Chaque page est un fichier séparé, téléchargé au moment de l'afficher
+const Dashboard = lazy(pageLoaders.Dashboard);
+const Incomes = lazy(pageLoaders.Incomes);
+const Expenses = lazy(pageLoaders.Expenses);
+const Envelopes = lazy(pageLoaders.Envelopes);
+const EnvelopeDetail = lazy(pageLoaders.EnvelopeDetail);
+const Savings = lazy(pageLoaders.Savings);
+const SavingDetail = lazy(pageLoaders.SavingDetail);
+const GlobalView = lazy(pageLoaders.GlobalView);
+const Account = lazy(pageLoaders.Account);
+const Login = lazy(pageLoaders.Login);
+const Signup = lazy(pageLoaders.Signup);
+const ForgotPassword = lazy(pageLoaders.ForgotPassword);
+const ResetPassword = lazy(pageLoaders.ResetPassword);
+
+const fullScreenLoader = <LoadingSpinner fullHeight color="#6366f1" />;
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -50,35 +55,39 @@ const AppRoutes = () => {
   // Arrivée par le lien « mot de passe oublié » : on demande le nouveau mot de passe avant tout.
   // Le routeur ne démarre qu'ensuite, sur l'adresse choisie par cette page.
   if (passwordRecovery) {
-    return <ResetPassword />;
+    return <Suspense fallback={fullScreenLoader}><ResetPassword /></Suspense>;
   }
 
+  // Ce Suspense couvre les pages publiques ; les pages connectées ont le leur dans AppLayout,
+  // pour que l'en-tête et la navigation restent affichés pendant le téléchargement d'une page.
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Suspense fallback={fullScreenLoader}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Pages connectées : le cadre (en-tête, navigation) est porté par AppLayout */}
-        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/incomes" element={<Incomes />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/envelopes" element={<Envelopes />} />
-          <Route path="/savings" element={<Savings />} />
-          <Route path="/global" element={<GlobalView />} />
-          <Route path="/account" element={<Account />} />
-        </Route>
+          {/* Pages connectées : le cadre (en-tête, navigation) est porté par AppLayout */}
+          <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/incomes" element={<Incomes />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/envelopes" element={<Envelopes />} />
+            <Route path="/savings" element={<Savings />} />
+            <Route path="/global" element={<GlobalView />} />
+            <Route path="/account" element={<Account />} />
+          </Route>
 
-        {/* Pages de détail : mise en page mobile sur tous les écrans */}
-        <Route element={<ProtectedRoute><AppLayout mobileOnly /></ProtectedRoute>}>
-          <Route path="/envelopes/:id" element={<EnvelopeDetail />} />
-          <Route path="/savings/:id" element={<SavingDetail />} />
-        </Route>
+          {/* Pages de détail : mise en page mobile sur tous les écrans */}
+          <Route element={<ProtectedRoute><AppLayout mobileOnly /></ProtectedRoute>}>
+            <Route path="/envelopes/:id" element={<EnvelopeDetail />} />
+            <Route path="/savings/:id" element={<SavingDetail />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 };

@@ -9,10 +9,13 @@ import { createRoot } from 'react-dom/client';
 import { emitRealtime, resetMock, DATA, USER, OTHER_USER_ID } from './supabaseMock';
 import { resetOwnChanges } from '../lib/ownChanges';
 import App from '../App';
+import { preloadPages } from '../lib/pageLoaders';
 
 vi.mock('../lib/supabaseClient', async () => ({ supabase: (await import('./supabaseMock')).supabase }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+// Les pages sont téléchargées à la demande : on les charge toutes avant de commencer
+await preloadPages();
 vi.setConfig({ testTimeout: 30_000 });
 
 let root = null;

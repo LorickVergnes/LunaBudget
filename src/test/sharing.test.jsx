@@ -10,10 +10,13 @@ import * as mock from './supabaseMock';
 import { resetOwnChanges } from '../lib/ownChanges';
 import { readAuthLinkFromUrl } from '../lib/authLink';
 import App from '../App';
+import { preloadPages } from '../lib/pageLoaders';
 
 vi.mock('../lib/supabaseClient', async () => ({ supabase: (await import('./supabaseMock')).supabase }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+// Les pages sont téléchargées à la demande : on les charge toutes avant de commencer
+await preloadPages();
 vi.setConfig({ testTimeout: 30_000 });
 
 let root = null;
