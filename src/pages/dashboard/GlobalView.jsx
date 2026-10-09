@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
-import { useDashboardFetch } from '../../hooks/useDashboardFetch';
+import { useDashboardQuery } from '../../hooks/useDashboardQuery';
 import { formatMonthDate, getTodayStr, addMonths } from '../../lib/dateUtils';
 import { computeMonthTotals } from '../../lib/budgetCalculations';
 import { filterActiveGoals } from '../../lib/savingsGoals';
@@ -10,11 +10,11 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import TopBar from '../../components/layout/TopBar';
 import useDesktop from '../../hooks/useDesktop';
 
+const EMPTY_HISTORY = { months: [], allTimeBalance: 0 };
+
 const GlobalView = () => {
     const { selectedDate, setSelectedDate } = useMonth();
     const isDesktop = useDesktop();
-    const [months, setMonths] = useState([]);
-    const [allTimeBalance, setAllTimeBalance] = useState(0);
     const [showForecast, setShowForecast] = useState(false);
 
     // Reset to current month on mount
@@ -22,12 +22,12 @@ const GlobalView = () => {
         setSelectedDate(new Date());
     }, [setSelectedDate]);
 
-    const load = useCallback(async (dashboardId) => {
+    const { data: history = EMPTY_HISTORY, loading } = useDashboardQuery('global', [formatMonthDate(selectedDate), showForecast], async (dashboardId) => {
         const todayStr = getTodayStr();
         const currentMonthStrFull = formatMonthDate(new Date());
 
         const currentMonthStr = formatMonthDate(selectedDate);
-        const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = await Promise.all([
+        const results = await Promise.all([
             supabase.from('incomes').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
             supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
             supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
@@ -35,6 +35,9 @@ const GlobalView = () => {
             supabase.from('savings').select('monthly_amount, start_month, end_month').eq('dashboard_id', dashboardId),
             supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
         ]);
+        const failed = results.find(result => result.error);
+        if (failed) throw failed.error;
+        const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = results;
 
         const getMonthlyTotals = (monthStr, isForecastActive) => {
             const monthStatus = monthStr < currentMonthStrFull ? 'past' : monthStr === currentMonthStrFull ? 'current' : 'future';
@@ -64,7 +67,6 @@ const GlobalView = () => {
             const { income, expense } = getMonthlyTotals(str, showForecast);
             result.push({ label, income, expense, balance: income - expense });
         }
-        setMonths(result);
 
         const allMonths = [...new Set([
             ...(allInc||[]).map(x => x.month_date),
@@ -80,10 +82,9 @@ const GlobalView = () => {
             totalExpensesSum += expense;
         });
         
-        setAllTimeBalance(totalIncomesSum - totalExpensesSum);
-    }, [selectedDate, showForecast]);
-
-    const { loading } = useDashboardFetch(load);
+        return { months: result, allTimeBalance: totalIncomesSum - totalExpensesSum };
+    });
+    const { months, allTimeBalance } = history;
 
     const allIncome = months.reduce((a, m) => a + m.income, 0);
     const allExpense = months.reduce((a, m) => a + m.expense, 0);

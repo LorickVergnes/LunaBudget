@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from './useAuth';
 import { useDashboard } from '../contexts/DashboardContext';
 import { useToast } from '../contexts/ToastContext';
-import { markOwnChange } from '../lib/ownChanges';
+import { markOwnChange, newRowId } from '../lib/ownChanges';
 
 /**
  * Formulaire d'ajout / modification d'une ligne d'une table du dashboard.
@@ -12,15 +12,18 @@ import { markOwnChange } from '../lib/ownChanges';
  * - `toForm(item)` : remplit le formulaire à partir d'une ligne existante
  * - `toRow(formData, { isEditing })` : ligne à enregistrer (user_id et dashboard_id sont ajoutés ici)
  * - `messages` : { created, updated }
- * - `refresh`, `setLoading` : viennent de useDashboardFetch
+ * - `refresh` : vient de useDashboardQuery, recharge les données après l'enregistrement
+ *
+ * `saving` est vrai pendant l'enregistrement (pour le bouton du formulaire).
  */
-export function useCrudForm({ table, emptyForm, toForm, toRow, messages, refresh, setLoading }) {
+export function useCrudForm({ table, emptyForm, toForm, toRow, messages, refresh }) {
   const { user } = useAuth();
   const { activeDashboard } = useDashboard();
   const { showToast } = useToast();
   const [formData, setFormData] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const resetForm = () => {
     setFormData(emptyForm());
@@ -44,16 +47,19 @@ export function useCrudForm({ table, emptyForm, toForm, toRow, messages, refresh
 
   const submit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     const row = { ...toRow(formData, { isEditing: Boolean(editingId) }), user_id: user.id, dashboard_id: activeDashboard.id };
-    if (editingId) markOwnChange(editingId);
+    // L'identifiant d'une nouvelle ligne est choisi ici, pour reconnaître notre propre ajout
+    // quand le temps réel nous le renvoie (et ne pas recharger les données une seconde fois).
+    const rowId = editingId || newRowId();
+    markOwnChange(rowId);
     const { error } = editingId
       ? await supabase.from(table).update(row).eq('id', editingId)
-      : await supabase.from(table).insert([row]);
+      : await supabase.from(table).insert([{ id: rowId, ...row }]);
+    setSaving(false);
 
     if (error) {
       showToast(error.message, { type: 'error' });
-      setLoading(false);
       return;
     }
     showToast(editingId ? messages.updated : messages.created, { type: 'success' });
@@ -61,7 +67,7 @@ export function useCrudForm({ table, emptyForm, toForm, toRow, messages, refresh
     refresh();
   };
 
-  return { formData, setField, showForm, editingId, resetForm, openCreate, openEdit, submit };
+  return { formData, setField, showForm, editingId, saving, resetForm, openCreate, openEdit, submit };
 }
 
 /**

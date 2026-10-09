@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
@@ -14,7 +14,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { AmountInput, TextField, DateField, SubmitButton } from '../../components/ui/FormUI';
-import { useDashboardFetch } from '../../hooks/useDashboardFetch';
+import { useDashboardQuery } from '../../hooks/useDashboardQuery';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
 
@@ -35,17 +35,15 @@ const EntryDetailPage = ({ config }) => {
   const [parentName] = useState(location.state?.name || config.defaultName);
   const parentIcon = getIconComponent(location.state?.icon || config.defaultIcon);
   const parentColor = location.state?.color || config.defaultColor;
-  const [entries, setEntries] = useState([]);
 
-  const load = useCallback(async (dashboardId) => {
-    const { data } = await supabase.from(table).select('*')
+  const { data: entries = [], loading, refresh, dashboardId } = useDashboardQuery(table, [id], async (activeDashboardId) => {
+    const { data, error } = await supabase.from(table).select('*')
       .eq(parentKey, id)
-      .eq('dashboard_id', dashboardId)
+      .eq('dashboard_id', activeDashboardId)
       .order('date', { ascending: false });
-    setEntries(data || []);
-  }, [table, parentKey, id]);
-
-  const { loading, setLoading, refresh, dashboardId } = useDashboardFetch(load);
+    if (error) throw error;
+    return data || [];
+  });
 
   useRealtimeSync(table, {
     onChange: refresh,
@@ -79,7 +77,6 @@ const EntryDetailPage = ({ config }) => {
     }),
     messages: { created: texts.created, updated: texts.updated },
     refresh,
-    setLoading,
   });
   const { formData, setField } = form;
 
@@ -104,7 +101,7 @@ const EntryDetailPage = ({ config }) => {
       </div>
 
       <div style={{ padding: '0px 16px', maxWidth: 480, margin: '0 auto' }}>
-        {loading && !form.showForm ? (
+        {loading ? (
           <LoadingSpinner color={config.spinnerColor} />
         ) : entries.length === 0 ? (
           <div className="card" style={{ padding: '60px 20px', textAlign: 'center', marginTop: 16 }}>
@@ -164,7 +161,7 @@ const EntryDetailPage = ({ config }) => {
             <TextField label="Nom" placeholder={texts.namePlaceholder} value={formData.name} onChange={e => setField('name', e.target.value)} />
           )}
           <DateField value={formData.date} onChange={e => setField('date', e.target.value)} />
-          <SubmitButton loading={loading}>{form.editingId ? 'Enregistrer' : texts.submitLabel}</SubmitButton>
+          <SubmitButton loading={form.saving}>{form.editingId ? 'Enregistrer' : texts.submitLabel}</SubmitButton>
         </form>
       </BottomModal>
 

@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { useDashboardFetch } from '../../hooks/useDashboardFetch';
+import { useDashboardQuery } from '../../hooks/useDashboardQuery';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
 import { formatMonthDate } from '../../lib/dateUtils';
@@ -30,19 +30,17 @@ const Savings = () => {
   const { selectedDate, setSelectedDate } = useMonth();
   const { canEdit } = useDashboard();
   const isDesktop = useDesktop();
-  const [goals, setGoals] = useState([]);
   const monthStr = formatMonthDate(selectedDate);
 
   // Tous les objectifs du dashboard avec leurs versements : changer de mois ne recharge rien
-  const load = useCallback(async (dashboardId) => {
-    const { data } = await supabase.from('savings')
+  const { data: goals = [], loading, refresh } = useDashboardQuery('savings', [], async (dashboardId) => {
+    const { data, error } = await supabase.from('savings')
       .select('*, saving_entries(amount, date, month_date)')
       .eq('dashboard_id', dashboardId)
       .order('created_at', { ascending: true });
-    setGoals(data || []);
-  }, []);
-
-  const { loading, setLoading, refresh } = useDashboardFetch(load);
+    if (error) throw error;
+    return data || [];
+  });
 
   useRealtimeSync('savings', {
     onChange: refresh,
@@ -80,7 +78,6 @@ const Savings = () => {
     }),
     messages: { created: 'Objectif créé avec succès', updated: 'Objectif modifié avec succès' },
     refresh,
-    setLoading,
   });
   const { formData, setField } = form;
 
@@ -113,7 +110,7 @@ const Savings = () => {
           min={monthStr.substring(0, 7)} value={formData.end_month} onChange={e => setField('end_month', e.target.value)} />
         <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
         <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
-        <SubmitButton loading={loading}>{form.editingId ? 'Enregistrer' : "Créer l'objectif"}</SubmitButton>
+        <SubmitButton loading={form.saving}>{form.editingId ? 'Enregistrer' : "Créer l'objectif"}</SubmitButton>
       </form>
     </BottomModal>
   );
@@ -292,7 +289,7 @@ const Savings = () => {
           </div>
         </div>
 
-        {loading && !form.showForm ? <LoadingSpinner color="#F9A825" /> : (
+        {loading ? <LoadingSpinner color="#F9A825" /> : (
           <div>
             <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -334,7 +331,7 @@ const Savings = () => {
           <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
 
-        {loading && !form.showForm ? <LoadingSpinner color="#F9A825" /> : (
+        {loading ? <LoadingSpinner color="#F9A825" /> : (
           <>
             <div className="fade-up" style={{ padding: 20, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 18, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <div style={{ fontSize: 11, opacity: .9, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5 }}>

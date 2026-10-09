@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useMonth } from '../../contexts/MonthContext';
-import { useDashboardFetch } from '../../hooks/useDashboardFetch';
+import { useDashboardQuery } from '../../hooks/useDashboardQuery';
 import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import {
   getMonthStatus, filterRealized, sumAmounts, computeBalance, computeMonthTotals,
@@ -10,7 +10,6 @@ import {
 } from '../../lib/budgetCalculations';
 import { filterActiveGoals } from '../../lib/savingsGoals';
 import { useNavigate } from 'react-router-dom';
-import { recurrenceService } from '../../services/recurrenceService';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -70,23 +69,21 @@ const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
   );
 };
 
+const NO_TOTALS = { income: 0, fixedExp: 0, envExp: 0, savings: 0 };
+const EMPTY_OVERVIEW = { data: NO_TOTALS, forecastData: NO_TOTALS, recentOps: [], envelopesPreview: [] };
+
 const Dashboard = () => {
   const { user } = useAuth();
   const { selectedDate, setSelectedDate } = useMonth();
   const navigate = useNavigate();
   const isDesktop = useDesktop();
   const [showForecast, setShowForecast] = useState(false);
-  const [data, setData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
-  const [forecastData, setForecastData] = useState({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
-  const [recentOps, setRecentOps] = useState([]);
-  const [envelopesPreview, setEnvelopesPreview] = useState([]);
+  const month = formatMonthDate(selectedDate);
 
-  const load = useCallback(async (dashboardId) => {
-    await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
-    const monthStr = formatMonthDate(selectedDate);
-    const [
-      { data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }
-    ] = await Promise.all([
+  const { data: overview = EMPTY_OVERVIEW, loading } = useDashboardQuery('overview', [month], async (dashboardId, { applyRecurrence }) => {
+    await applyRecurrence(selectedDate);
+    const monthStr = month;
+    const results = await Promise.all([
       supabase.from('incomes').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
       supabase.from('expenses').select('id, amount, date, name, icon, color, is_recurrent').eq('dashboard_id', dashboardId).eq('month_date', monthStr).eq('is_hidden', false),
       supabase.from('envelope_expenses').select('id, amount, date, name, icon, color, envelope_id').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
@@ -94,6 +91,9 @@ const Dashboard = () => {
       supabase.from('savings').select('monthly_amount, start_month, end_month').eq('dashboard_id', dashboardId),
       supabase.from('saving_entries').select('id, amount, date, savings(name, icon, color)').eq('dashboard_id', dashboardId).eq('month_date', monthStr),
     ]);
+    const failed = results.find(result => result.error);
+    if (failed) throw failed.error;
+    const [{ data: inc }, { data: exp }, { data: envExp }, { data: envs }, { data: sav }, { data: savEntries }] = results;
 
     const todayStr = getTodayStr();
     const monthStatus = getMonthStatus(selectedDate);
@@ -103,8 +103,6 @@ const Dashboard = () => {
       monthStatus,
       todayStr
     );
-    setForecastData(forecast);
-    setData(real);
 
     const recent = [
       ...(inc || []).map(i => ({ ...i, type: 'income', label: i.name })),
@@ -121,7 +119,6 @@ const Dashboard = () => {
       }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
-    setRecentOps(recent);
 
     const realEnvExp = filterRealized(envExp, monthStatus, todayStr);
     const envPreview = (envs || []).map(env => {
@@ -135,10 +132,10 @@ const Dashboard = () => {
         spent
       };
     });
-    setEnvelopesPreview(envPreview);
-  }, [selectedDate]);
 
-  const { loading } = useDashboardFetch(load);
+    return { data: real, forecastData: forecast, recentOps: recent, envelopesPreview: envPreview };
+  });
+  const { data, forecastData, recentOps, envelopesPreview } = overview;
 
   const activeData = showForecast ? forecastData : data;
   const balance = computeBalance(activeData);

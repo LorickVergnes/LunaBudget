@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
@@ -6,7 +6,6 @@ import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtil
 import { getMonthStatus, isRealized, filterRealized, sumAmounts, roundToCents } from '../../lib/budgetCalculations';
 import { Plus, RotateCw, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { recurrenceService } from '../../services/recurrenceService';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import BottomModal from '../../components/ui/BottomModal';
@@ -17,7 +16,7 @@ import { getIconComponent } from '../../lib/iconRegistry';
 import DonutChart from '../../components/ui/DonutChart';
 import ColorPicker from '../../components/ui/ColorPicker';
 import useDesktop from '../../hooks/useDesktop';
-import { useDashboardFetch } from '../../hooks/useDashboardFetch';
+import { useDashboardQuery } from '../../hooks/useDashboardQuery';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
 
@@ -80,20 +79,19 @@ const OperationsPage = ({ config }) => {
   const { selectedDate, setSelectedDate } = useMonth();
   const { canEdit } = useDashboard();
   const isDesktop = useDesktop();
-  const [items, setItems] = useState([]);
   const [showForecast, setShowForecast] = useState(false);
+  const month = formatMonthDate(selectedDate);
 
-  const load = useCallback(async (dashboardId) => {
-    await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
+  const { data: items = [], loading, refresh } = useDashboardQuery(table, [month], async (dashboardId, { applyRecurrence }) => {
+    await applyRecurrence(selectedDate);
     const { data, error } = await supabase.from(table).select('*')
       .eq('dashboard_id', dashboardId)
-      .eq('month_date', formatMonthDate(selectedDate))
+      .eq('month_date', month)
       .eq('is_hidden', false)
       .order('date', { ascending: false });
-    if (!error) setItems(data || []);
-  }, [table, selectedDate]);
-
-  const { loading, setLoading, refresh } = useDashboardFetch(load);
+    if (error) throw error;
+    return data || [];
+  });
 
   useRealtimeSync(table, {
     onChange: refresh,
@@ -108,7 +106,6 @@ const OperationsPage = ({ config }) => {
     toRow: (formData) => ({ ...formData, amount: roundToCents(formData.amount), month_date: formatMonthDate(selectedDate) }),
     messages: { created: texts.created, updated: texts.updated },
     refresh,
-    setLoading,
   });
   const { formData, setField } = form;
 
@@ -136,7 +133,7 @@ const OperationsPage = ({ config }) => {
         <CheckboxCard label="Ajouter chaque mois" text={texts.recurrentText} checked={formData.is_recurrent} onToggle={() => setField('is_recurrent', !formData.is_recurrent)} />
         <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
         <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
-        <SubmitButton loading={loading}>{form.editingId ? 'Enregistrer' : 'Ajouter'}</SubmitButton>
+        <SubmitButton loading={form.saving}>{form.editingId ? 'Enregistrer' : 'Ajouter'}</SubmitButton>
       </form>
     </BottomModal>
   );
@@ -175,7 +172,7 @@ const OperationsPage = ({ config }) => {
           </div>
         </div>
 
-        {loading && !form.showForm ? <LoadingSpinner /> : (
+        {loading ? <LoadingSpinner /> : (
           <div className="desktop-main-grid">
             <div className="desktop-budget-card" style={{ display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <p className="desktop-card-title" style={{ color: 'white', textShadow: 'none' }}>{texts.summaryTitle}</p>
@@ -241,7 +238,7 @@ const OperationsPage = ({ config }) => {
             <button onClick={() => setShowForecast(true)} style={{ border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', background: showForecast ? accent : 'transparent', color: showForecast ? 'white' : '#B0B8C9' }}>Prévisions</button>
           </div>
         </div>
-        {loading && !form.showForm ? <LoadingSpinner /> : (
+        {loading ? <LoadingSpinner /> : (
           <>
             <div className="fade-up" style={{ padding: '20px', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap', background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 20, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.2)', boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>

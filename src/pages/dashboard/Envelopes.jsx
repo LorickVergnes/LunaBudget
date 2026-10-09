@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { useDashboardFetch } from '../../hooks/useDashboardFetch';
+import { useDashboardQuery } from '../../hooks/useDashboardQuery';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useCrudForm, useDeleteFlow } from '../../hooks/useCrud';
 import { formatMonthDate, getTodayStr } from '../../lib/dateUtils';
@@ -10,7 +10,6 @@ import { getMonthStatus, filterRealized, sumAmounts, roundToCents } from '../../
 import { formatEuro as fmt } from '../../lib/format';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { recurrenceService } from '../../services/recurrenceService';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -30,26 +29,25 @@ const Envelopes = () => {
   const { selectedDate, setSelectedDate } = useMonth();
   const { canEdit } = useDashboard();
   const isDesktop = useDesktop();
-  const [envelopes, setEnvelopes] = useState([]);
+  const month = formatMonthDate(selectedDate);
 
-  const load = useCallback(async (dashboardId) => {
-    await recurrenceService.checkAndApplyRecurrence(dashboardId, selectedDate);
-    const { data: envs } = await supabase.from('envelopes')
+  const { data: envelopes = [], loading, refresh } = useDashboardQuery('envelopes', [month], async (dashboardId, { applyRecurrence }) => {
+    await applyRecurrence(selectedDate);
+    const { data: envs, error } = await supabase.from('envelopes')
       .select('*, envelope_expenses(amount, date)')
       .eq('dashboard_id', dashboardId)
-      .eq('month_date', formatMonthDate(selectedDate))
+      .eq('month_date', month)
       .eq('is_hidden', false);
+    if (error) throw error;
 
     const todayStr = getTodayStr();
     const monthStatus = getMonthStatus(selectedDate);
 
-    setEnvelopes((envs || []).map(env => ({
+    return (envs || []).map(env => ({
       ...env,
       spent: sumAmounts(filterRealized(env.envelope_expenses, monthStatus, todayStr))
-    })));
-  }, [selectedDate]);
-
-  const { loading, setLoading, refresh } = useDashboardFetch(load);
+    }));
+  });
 
   useRealtimeSync('envelopes', {
     onChange: refresh,
@@ -71,7 +69,6 @@ const Envelopes = () => {
     toRow: (formData) => ({ ...formData, max_amount: roundToCents(formData.max_amount), month_date: formatMonthDate(selectedDate) }),
     messages: { created: 'Enveloppe créée avec succès', updated: 'Enveloppe modifiée avec succès' },
     refresh,
-    setLoading,
   });
   const { formData, setField } = form;
 
@@ -93,7 +90,7 @@ const Envelopes = () => {
         <CheckboxCard label="Reporter chaque mois" text="Enveloppe récurrente" checked={formData.is_recurrent} onToggle={() => setField('is_recurrent', !formData.is_recurrent)} />
         <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
         <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
-        <SubmitButton loading={loading}>{form.editingId ? 'Enregistrer' : "Créer l'enveloppe"}</SubmitButton>
+        <SubmitButton loading={form.saving}>{form.editingId ? 'Enregistrer' : "Créer l'enveloppe"}</SubmitButton>
       </form>
     </BottomModal>
   );
@@ -224,7 +221,7 @@ const Envelopes = () => {
           </div>
         </div>
 
-        {loading && !form.showForm ? <LoadingSpinner color={ACCENT} /> : (
+        {loading ? <LoadingSpinner color={ACCENT} /> : (
           <div>
             <div className="desktop-budget-card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
@@ -267,7 +264,7 @@ const Envelopes = () => {
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
         <div style={{ height: 16 }} />
 
-        {loading && !form.showForm ? <LoadingSpinner color={ACCENT} /> : (
+        {loading ? <LoadingSpinner color={ACCENT} /> : (
           <>
             <div style={{ background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 18, padding: 20, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)', textShadow: '0 1px 3px rgba(0,0,0,0.2)' }} className="fade-up">
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

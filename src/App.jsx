@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from './lib/queryClient';
 import Dashboard from './pages/dashboard/Dashboard';
 import Incomes from './pages/dashboard/Incomes';
 import Expenses from './pages/dashboard/Expenses';
@@ -81,17 +84,22 @@ const AppRoutes = () => {
 };
 
 function App() {
+  // Un cache par instance de l'application (et non global au module)
+  const [queryClient] = useState(createQueryClient);
+
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <DashboardProvider>
-          <MonthProvider>
-            <AmbientOrbs />
-            <AppRoutes />
-          </MonthProvider>
-        </DashboardProvider>
-      </AuthProvider>
-    </ToastProvider>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <AuthProvider>
+          <DashboardProvider>
+            <MonthProvider>
+              <AmbientOrbs />
+              <AppRoutes />
+            </MonthProvider>
+          </DashboardProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </QueryClientProvider>
   );
 }
 

@@ -12,6 +12,16 @@ const recentChanges = new Map(); // id de ligne -> horodatage
 const monthsApplied = new Set(); // "dashboard:mois" déjà traités dans cette session
 let lastRecurrenceAt = -Infinity;
 
+// Identifiant (UUID) d'une ligne que l'on s'apprête à créer
+export const newRowId = () => {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  // Navigateurs anciens ou page servie sans HTTPS
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    return (char === 'x' ? random : (random % 4) + 8).toString(16);
+  });
+};
+
 export const markOwnChange = (id) => {
   const now = Date.now();
   for (const [key, time] of recentChanges) {

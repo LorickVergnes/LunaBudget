@@ -17,7 +17,8 @@ const VERBS = { INSERT: 'ajouté', UPDATE: 'modifié', DELETE: 'supprimé' };
  * - `accept`    : filtre supplémentaire sur la ligne reçue (ex. la bonne enveloppe)
  * - `allMonths` : réagit aussi aux changements des autres mois (données cumulées, comme l'épargne)
  *
- * Par défaut les changements des autres mois sont ignorés. Nos propres actions ne sont jamais notifiées.
+ * Par défaut les changements des autres mois sont ignorés. Une action faite depuis cet onglet
+ * n'est ni notifiée ni rechargée une seconde fois.
  */
 export function useRealtimeSync(table, { onChange, message, feminine = false, accept, allMonths = false }) {
   const { user } = useAuth();
@@ -30,13 +31,16 @@ export function useRealtimeSync(table, { onChange, message, feminine = false, ac
     if (!allMonths && record?.month_date && record.month_date !== formatMonthDate(selectedDate)) return;
     if (accept && !accept(record)) return;
 
+    // Changement fait depuis cet onglet (une suppression n'arrive qu'avec l'identifiant, on se fie
+    // donc à la ligne touchée) : les données ont déjà été rechargées après l'action, rien à faire.
+    if (isOwnChange(newRecord?.id ?? oldRecord?.id)) return;
+
     onChange();
 
-    // Une suppression n'arrive qu'avec l'identifiant : on reconnaît nos actions à la ligne touchée.
-    const rowId = newRecord?.id ?? oldRecord?.id;
-    const isMine = isOwnChange(rowId)
-      || (eventType === 'INSERT' && newRecord?.user_id === user?.id)
-      || (eventType === 'INSERT' && newRecord?.is_recurrent && isRecurrenceRecent());
+    // Pas de notification pour un ajout fait par moi sur un autre appareil,
+    // ni pour les copies de récurrence que je viens de déclencher en ouvrant le mois.
+    const isMine = eventType === 'INSERT'
+      && (newRecord?.user_id === user?.id || (newRecord?.is_recurrent && isRecurrenceRecent()));
     if (isMine) return;
 
     const verb = (VERBS[eventType] || VERBS.UPDATE) + (feminine ? 'e' : '');
