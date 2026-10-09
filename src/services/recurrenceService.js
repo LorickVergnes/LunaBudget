@@ -9,6 +9,7 @@ export const recurrenceService = {
   /**
    * Applique les éléments récurrents du mois précédent vers le mois actuel.
    * La copie est faite par la fonction SQL apply_recurrence (une seule transaction côté base).
+   * Un échec est renvoyé à l'appelant : il ne doit pas passer pour une copie réussie.
    */
   async checkAndApplyRecurrence(dashboardId, currentMonth) {
     if (!dashboardId) return;
@@ -21,6 +22,6 @@ export const recurrenceService = {
       for_month: month
     });
 
-    if (error) console.error('Erreur récurrence:', error.message);
+    if (error) throw error;
   }
 };

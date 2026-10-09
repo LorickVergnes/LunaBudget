@@ -38,3 +38,19 @@ export const parseLocalDate = (dateStr) => {
   const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
 };
+
+// Mois ('AAAA-MM-01') auquel appartient une date 'AAAA-MM-JJ'.
+// Le mois d'une opération vient de sa date, jamais du mois affiché à l'écran.
+export const monthOfDateStr = (dateStr) => `${dateStr.slice(0, 7)}-01`;
+
+// Premier et dernier jour ('AAAA-MM-JJ') d'un mois 'AAAA-MM-01' : les bornes d'un champ date
+export const getMonthBounds = (monthStr) => {
+  const [year, month] = monthStr.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return { min: `${monthStr.slice(0, 7)}-01`, max: `${monthStr.slice(0, 7)}-${pad(lastDay)}` };
+};
+
+// Date proposée pour une nouvelle opération dans ce mois :
+// aujourd'hui si c'est le mois en cours, sinon le premier jour du mois.
+export const defaultDateInMonth = (monthStr, now = new Date()) =>
+  (formatMonthDate(now) === monthStr ? formatLocalDate(now) : monthStr);

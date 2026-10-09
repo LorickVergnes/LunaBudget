@@ -56,13 +56,13 @@ export const TextField = ({ label, value, onChange, placeholder }) => (
   </FormCard>
 );
 
-// DateField: champ date obligatoire
-export const DateField = ({ value, onChange }) => (
+// DateField: champ date obligatoire, limité à [min, max] quand ils sont fournis
+export const DateField = ({ value, onChange, min, max }) => (
   <FormCard style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
     <Calendar size={22} style={{ color: '#9CA3AF' }} />
     <div style={{ flex: 1 }}>
       <label style={labelStyle(2)}>Date</label>
-      <input type="date" required value={value} onChange={onChange} style={inputStyle} />
+      <input type="date" required min={min} max={max} value={value} onChange={onChange} style={inputStyle} />
     </div>
   </FormCard>
 );

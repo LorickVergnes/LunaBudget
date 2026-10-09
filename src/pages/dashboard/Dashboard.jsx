@@ -5,7 +5,7 @@ import { useMonth } from '../../contexts/MonthContext';
 import { useDashboardQuery } from '../../hooks/useDashboardQuery';
 import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
 import {
-  getMonthStatus, filterRealized, sumAmounts, computeBalance, computeMonthTotals,
+  getMonthStatus, isRealized, filterRealized, sumAmounts, computeBalance, computeMonthTotals,
   getDaysLeftInMonth, getDaysInMonth
 } from '../../lib/budgetCalculations';
 import { filterActiveGoals } from '../../lib/savingsGoals';
@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import LoadError from '../../components/ui/LoadError';
 import useDesktop from '../../hooks/useDesktop';
 import {
   PiggyBank, Info, Wallet, ArrowDownLeft, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Sparkles, Repeat
@@ -28,16 +29,25 @@ const ProgressLinear = ({ value, max, color }) => {
   );
 };
 
+// Couleurs des trois parts du budget : choisies pour rester distinctes entre elles,
+// y compris pour les personnes daltoniennes. La légende sous l'anneau porte les libellés et les montants.
+const BUDGET_PARTS = [
+  { key: 'fixedExp', label: 'Dépenses fixes', color: '#C98A1F' },
+  { key: 'envExp', label: 'Enveloppes', color: '#3D94C9' },
+  { key: 'savings', label: 'Épargne', color: '#7C5CE0' },
+];
+
 const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
   const r = 40, cx = 50, cy = 50;
   const circ = 2 * Math.PI * r;
-  const normalizedTotal = Math.max(total, 1);
+  // L'anneau entier représente les revenus ; si le budget les dépasse, il représente le total engagé
+  const normalizedTotal = Math.max(total, segments.reduce((sum, seg) => sum + seg.value, 0), 1);
 
   return (
     <div style={{ position: 'relative', width: size, height: size, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
       <svg width={size} height={size} viewBox="0 0 100 100">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F4F7F6" strokeWidth={12} />
-        <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={12} stroke="#FFFFFF" />
+        {/* Piste : la part des revenus qui n'est pas engagée */}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#EEF1F6" strokeWidth={12} />
 
         {segments.map((seg, i) => {
           const pct = seg.value / normalizedTotal;
@@ -55,13 +65,15 @@ const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
                 transform: 'rotate(-90deg)', transformOrigin: '50px 50px',
                 transition: 'stroke-dasharray 0.8s ease, stroke-dashoffset 0.8s ease'
               }}
-            />
+            >
+              {seg.title && <title>{seg.title}</title>}
+            </circle>
           );
         })}
       </svg>
       <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
         <span style={{ fontSize: size * 0.18, fontWeight: 900, color: '#4A6984', display: 'block' }}>
-          {label || `${Math.round(segments.reduce((a,s) => a+s.value, 0) / normalizedTotal * 100)}%`}
+          {label}
         </span>
         {sublabel && <span style={{ fontSize: size * 0.08, fontWeight: 700, color: '#B0B8C9', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>{sublabel}</span>}
       </div>
@@ -70,7 +82,7 @@ const BudgetDonut = ({ segments, total, size = 150, label, sublabel }) => {
 };
 
 const NO_TOTALS = { income: 0, fixedExp: 0, envExp: 0, savings: 0 };
-const EMPTY_OVERVIEW = { data: NO_TOTALS, forecastData: NO_TOTALS, recentOps: [], envelopesPreview: [] };
+const EMPTY_OVERVIEW = { data: NO_TOTALS, forecastData: NO_TOTALS, operations: [], envelopesPreview: [] };
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -80,7 +92,7 @@ const Dashboard = () => {
   const [showForecast, setShowForecast] = useState(false);
   const month = formatMonthDate(selectedDate);
 
-  const { data: overview = EMPTY_OVERVIEW, loading } = useDashboardQuery('overview', [month], async (dashboardId, { applyRecurrence }) => {
+  const { data: overview = EMPTY_OVERVIEW, loading, error, retry } = useDashboardQuery('overview', [month], async (dashboardId, { applyRecurrence }) => {
     await applyRecurrence(selectedDate);
     const monthStr = month;
     const results = await Promise.all([
@@ -104,7 +116,9 @@ const Dashboard = () => {
       todayStr
     );
 
-    const recent = [
+    // Toutes les opérations du mois, la plus récente en premier. `realized` distingue ce qui est
+    // déjà arrivé de ce qui est seulement prévu (un récurrent daté de la fin du mois, par exemple).
+    const operations = [
       ...(inc || []).map(i => ({ ...i, type: 'income', label: i.name })),
       ...(exp || []).map(e => ({ ...e, type: 'expense', label: e.name })),
       ...(envExp || []).map(e => ({ ...e, type: 'expense', label: e.name || 'Dépense' })),
@@ -117,8 +131,8 @@ const Dashboard = () => {
         color: s.savings?.color || '#E5BA73',
         type: 'expense'
       }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-
+    ].map(op => ({ ...op, realized: isRealized(op.date, monthStatus, todayStr) }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const realEnvExp = filterRealized(envExp, monthStatus, todayStr);
     const envPreview = (envs || []).map(env => {
@@ -133,13 +147,17 @@ const Dashboard = () => {
       };
     });
 
-    return { data: real, forecastData: forecast, recentOps: recent, envelopesPreview: envPreview };
+    return { data: real, forecastData: forecast, operations, envelopesPreview: envPreview };
   });
-  const { data, forecastData, recentOps, envelopesPreview } = overview;
+  const { data, forecastData, operations, envelopesPreview } = overview;
+  // En réel, « dernières opérations » ne montre que ce qui est déjà arrivé
+  const recentOps = (showForecast ? operations : operations.filter(op => op.realized)).slice(0, 5);
 
   const activeData = showForecast ? forecastData : data;
   const balance = computeBalance(activeData);
   const expenseTotal = activeData.fixedExp + activeData.envExp;
+  // Tout ce qui est engagé sur les revenus : c'est ce que montre l'anneau, épargne comprise
+  const committedTotal = expenseTotal + activeData.savings;
 
   const now = new Date();
   const monthStatus = getMonthStatus(selectedDate, now);
@@ -148,12 +166,12 @@ const Dashboard = () => {
   if (monthStatus === 'current') {
     const daysLeft = getDaysLeftInMonth(now);
     if (showForecast) {
-      const perDay = computeBalance(forecastData) / 30;
-      tipMessage = <>Prévisionnel : Fin de mois avec environ <strong>{balance.toLocaleString('fr-FR')} €</strong> ({perDay.toFixed(2)} €/j).</>;
+      const perDay = computeBalance(forecastData) / getDaysInMonth(selectedDate);
+      tipMessage = <>Prévisionnel : Fin de mois avec environ <strong>{balance.toLocaleString('fr-FR')} €</strong> ({perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/j).</>;
     } else {
       if (balance >= 0) {
         const perDay = balance / daysLeft;
-        tipMessage = <>Il reste <strong>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong> / jour pour les {daysLeft} derniers jours.</>;
+        tipMessage = <>Il reste <strong>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong> / jour pour les {daysLeft} derniers jours.</>;
       } else {
         tipMessage = <>Budget dépassé de <strong>{Math.abs(balance).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>. Attention aux dépenses non essentielles.</>;
       }
@@ -165,13 +183,13 @@ const Dashboard = () => {
     tipMessage = <>Prévision : <strong>{perDay.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong> / jour.</>;
   }
 
-  const donutSegments = [
-    { color: '#A0D2EB', value: activeData.fixedExp },
-    { color: '#E5BA73', value: activeData.envExp },
-    { color: '#F9A825', value: activeData.savings },
-  ];
-
   const fmt = (n) => n.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €';
+
+  const donutSegments = BUDGET_PARTS.map(part => ({
+    ...part,
+    value: activeData[part.key],
+    title: `${part.label} : ${fmt(activeData[part.key])}`,
+  }));
 
   const dashboardContent = () => (
     <div style={{ display: 'grid', gap: isDesktop ? 20 : 16, gridTemplateColumns: isDesktop ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)' }}>
@@ -265,21 +283,25 @@ const Dashboard = () => {
         <div style={{ width: '100%', fontSize: 16, fontWeight: 800, color: '#4A6984', marginBottom: 20, display: 'flex', justifyContent: 'flex-start' }}>Budget du mois</div>
         <BudgetDonut
           segments={donutSegments}
-          total={activeData.income || 1}
+          total={activeData.income}
           size={160}
-          label={`${activeData.income > 0 ? Math.round((expenseTotal / activeData.income) * 100) : 0}%`}
-          sublabel="utilisé"
+          label={activeData.income > 0 ? `${Math.round((committedTotal / activeData.income) * 100)}%` : '—'}
+          sublabel="des revenus"
         />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, width: '100%', marginTop: 24 }}>
-          <div style={{ background: "#F5F7FF", borderRadius: 12, padding: "12px 8px", textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: "#B0B8C9", fontWeight: 700, textTransform: "uppercase" }}>Dépensé</div>
-            <div style={{ fontWeight: 800, color: "#4A6984", marginTop: 4, fontSize: 14 }}>{fmt(expenseTotal)}</div>
-          </div>
-          <div style={{ background: "#F5F7FF", borderRadius: 12, padding: "12px 8px", textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: "#B0B8C9", fontWeight: 700, textTransform: "uppercase" }}>Revenus</div>
-            <div style={{ fontWeight: 800, color: "#4A6984", marginTop: 4, fontSize: 14 }}>{fmt(activeData.income)}</div>
-          </div>
-        </div>
+        {/* Légende : chaque part de l'anneau avec son montant, puis le total rapporté aux revenus */}
+        <ul style={{ listStyle: 'none', padding: 0, margin: '20px 0 0', width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {donutSegments.map(seg => (
+            <li key={seg.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0, color: '#4A6984', fontWeight: 600 }}>{seg.label}</span>
+              <span style={{ color: '#4A6984', fontWeight: 800, whiteSpace: 'nowrap' }}>{fmt(seg.value)}</span>
+            </li>
+          ))}
+          <li style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, borderTop: '1px solid #F1F4FB', paddingTop: 8 }}>
+            <span style={{ flex: 1, minWidth: 0, color: '#6B7280', fontWeight: 600, whiteSpace: 'nowrap' }}>Total</span>
+            <span style={{ color: '#6B7280', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(committedTotal)} sur {fmt(activeData.income)}</span>
+          </li>
+        </ul>
       </div>
 
       {/* Dernières opérations */}
@@ -289,7 +311,9 @@ const Dashboard = () => {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {recentOps.length === 0 ? (
-            <div style={{ padding: '20px 0', textAlign: 'center', color: '#B0B8C9', fontSize: 13, fontWeight: 600 }}>Aucune opération ce mois-ci</div>
+            <div style={{ padding: '20px 0', textAlign: 'center', color: '#B0B8C9', fontSize: 13, fontWeight: 600 }}>
+              {operations.length > 0 ? "Aucune opération réalisée pour l'instant" : 'Aucune opération ce mois-ci'}
+            </div>
           ) : recentOps.map((t, i) => (
             <div key={`${t.id}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: i === 0 ? "none" : "1px solid #F1F4FB", borderTopWidth: i === 0 ? 0 : 1, borderTopStyle: 'solid', borderTopColor: '#F1F4FB' }}>
               <IconBubble icon={t.icon || 'ShoppingCart'} color={t.color || '#A0D2EB'} size={38} />
@@ -299,6 +323,7 @@ const Dashboard = () => {
                     {t.label}
                   </div>
                   {t.is_recurrent && <Repeat size={11} style={{ color: "#A0D2EB", flexShrink: 0 }} />}
+                  {!t.realized && <span style={{ fontSize: 10, color: '#B7791F', fontWeight: 700, flexShrink: 0 }}>Prévu</span>}
                 </div>
                 <div style={{ fontSize: 11, color: "#B0B8C9", fontWeight: 600, marginTop: 2 }}>
                   {parseLocalDate(t.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
@@ -369,7 +394,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {loading ? <LoadingSpinner /> : dashboardContent()}
+        {loading ? <LoadingSpinner /> : error ? <LoadError onRetry={retry} /> : dashboardContent()}
       </>
     );
   }
@@ -389,7 +414,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {loading ? <LoadingSpinner /> : dashboardContent()}
+        {loading ? <LoadingSpinner /> : error ? <LoadError onRetry={retry} /> : dashboardContent()}
 
       </div>
     </div>

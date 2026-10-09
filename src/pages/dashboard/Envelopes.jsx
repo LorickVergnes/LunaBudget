@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import LoadError from '../../components/ui/LoadError';
 import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput, TextField, CheckboxCard, SubmitButton } from '../../components/ui/FormUI';
@@ -31,7 +32,7 @@ const Envelopes = () => {
   const isDesktop = useDesktop();
   const month = formatMonthDate(selectedDate);
 
-  const { data: envelopes = [], loading, refresh } = useDashboardQuery('envelopes', [month], async (dashboardId, { applyRecurrence }) => {
+  const { data: envelopes = [], loading, error, retry, refresh } = useDashboardQuery('envelopes', [month], async (dashboardId, { applyRecurrence }) => {
     await applyRecurrence(selectedDate);
     const { data: envs, error } = await supabase.from('envelopes')
       .select('*, envelope_expenses(amount, date)')
@@ -66,7 +67,8 @@ const Envelopes = () => {
     table: 'envelopes',
     emptyForm: () => ({ name: '', max_amount: '', icon: 'Wallet', color: ACCENT, is_recurrent: false }),
     toForm: (env) => ({ name: env.name, max_amount: env.max_amount.toString(), icon: env.icon || 'Wallet', color: env.color || ACCENT, is_recurrent: env.is_recurrent }),
-    toRow: (formData) => ({ ...formData, max_amount: roundToCents(formData.max_amount), month_date: formatMonthDate(selectedDate) }),
+    // Le mois est fixé à la création : modifier une enveloppe ne la change pas de mois
+    toRow: (formData, { isEditing }) => ({ ...formData, max_amount: roundToCents(formData.max_amount), ...(isEditing ? {} : { month_date: month }) }),
     messages: { created: 'Enveloppe créée avec succès', updated: 'Enveloppe modifiée avec succès' },
     refresh,
   });
@@ -221,7 +223,7 @@ const Envelopes = () => {
           </div>
         </div>
 
-        {loading ? <LoadingSpinner color={ACCENT} /> : (
+        {loading ? <LoadingSpinner color={ACCENT} /> : error ? <LoadError onRetry={retry} /> : (
           <div>
             <div className="desktop-budget-card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
@@ -264,7 +266,7 @@ const Envelopes = () => {
         <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
         <div style={{ height: 16 }} />
 
-        {loading ? <LoadingSpinner color={ACCENT} /> : (
+        {loading ? <LoadingSpinner color={ACCENT} /> : error ? <LoadError onRetry={retry} /> : (
           <>
             <div style={{ background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 18, padding: 20, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)', textShadow: '0 1px 3px rgba(0,0,0,0.2)' }} className="fade-up">
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

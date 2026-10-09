@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useMonth } from '../../contexts/MonthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { formatMonthDate, getTodayStr, parseLocalDate } from '../../lib/dateUtils';
+import { formatMonthDate, getTodayStr, parseLocalDate, monthOfDateStr, getMonthBounds, defaultDateInMonth } from '../../lib/dateUtils';
 import { getMonthStatus, isRealized, filterRealized, sumAmounts, roundToCents } from '../../lib/budgetCalculations';
 import { Plus, RotateCw, Trash2, Pencil } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import LoadError from '../../components/ui/LoadError';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import BottomModal from '../../components/ui/BottomModal';
@@ -82,7 +83,7 @@ const OperationsPage = ({ config }) => {
   const [showForecast, setShowForecast] = useState(false);
   const month = formatMonthDate(selectedDate);
 
-  const { data: items = [], loading, refresh } = useDashboardQuery(table, [month], async (dashboardId, { applyRecurrence }) => {
+  const { data: items = [], loading, error, retry, refresh } = useDashboardQuery(table, [month], async (dashboardId, { applyRecurrence }) => {
     await applyRecurrence(selectedDate);
     const { data, error } = await supabase.from(table).select('*')
       .eq('dashboard_id', dashboardId)
@@ -101,9 +102,10 @@ const OperationsPage = ({ config }) => {
 
   const form = useCrudForm({
     table,
-    emptyForm: () => ({ name: '', amount: '', date: getTodayStr(), is_recurrent: false, icon: config.defaultIcon, color: accent }),
+    emptyForm: () => ({ name: '', amount: '', date: defaultDateInMonth(month), is_recurrent: false, icon: config.defaultIcon, color: accent }),
     toForm: (item) => ({ name: item.name, amount: item.amount.toString(), date: item.date.split('T')[0], is_recurrent: item.is_recurrent, icon: item.icon || config.defaultIcon, color: item.color || accent }),
-    toRow: (formData) => ({ ...formData, amount: roundToCents(formData.amount), month_date: formatMonthDate(selectedDate) }),
+    // Le mois de l'opération vient de sa date (le champ date est limité au mois affiché)
+    toRow: (formData) => ({ ...formData, amount: roundToCents(formData.amount), month_date: monthOfDateStr(formData.date) }),
     messages: { created: texts.created, updated: texts.updated },
     refresh,
   });
@@ -113,6 +115,7 @@ const OperationsPage = ({ config }) => {
 
   const todayStr = getTodayStr();
   const monthStatus = getMonthStatus(selectedDate);
+  const dateBounds = getMonthBounds(month);
 
   const visibleItems = showForecast ? items : filterRealized(items, monthStatus, todayStr);
 
@@ -129,7 +132,7 @@ const OperationsPage = ({ config }) => {
       <form onSubmit={form.submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <AmountInput value={formData.amount} onChange={e => setField('amount', e.target.value)} color="#9CA3AF" />
         <TextField label="Nom" placeholder={texts.namePlaceholder} value={formData.name} onChange={e => setField('name', e.target.value)} />
-        <DateField value={formData.date} onChange={e => setField('date', e.target.value)} />
+        <DateField value={formData.date} min={dateBounds.min} max={dateBounds.max} onChange={e => setField('date', e.target.value)} />
         <CheckboxCard label="Ajouter chaque mois" text={texts.recurrentText} checked={formData.is_recurrent} onToggle={() => setField('is_recurrent', !formData.is_recurrent)} />
         <FormCard><IconSelector value={formData.icon} color={formData.color} onChange={val => setField('icon', val)} /></FormCard>
         <FormCard><ColorPicker value={formData.color} onChange={c => setField('color', c)} /></FormCard>
@@ -172,7 +175,7 @@ const OperationsPage = ({ config }) => {
           </div>
         </div>
 
-        {loading ? <LoadingSpinner /> : (
+        {loading ? <LoadingSpinner /> : error ? <LoadError onRetry={retry} /> : (
           <div className="desktop-main-grid">
             <div className="desktop-budget-card" style={{ display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <p className="desktop-card-title" style={{ color: 'white', textShadow: 'none' }}>{texts.summaryTitle}</p>
@@ -238,7 +241,7 @@ const OperationsPage = ({ config }) => {
             <button onClick={() => setShowForecast(true)} style={{ border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', background: showForecast ? accent : 'transparent', color: showForecast ? 'white' : '#B0B8C9' }}>Prévisions</button>
           </div>
         </div>
-        {loading ? <LoadingSpinner /> : (
+        {loading ? <LoadingSpinner /> : error ? <LoadError onRetry={retry} /> : (
           <>
             <div className="fade-up" style={{ padding: '20px', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px 24px', flexWrap: 'wrap', background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 20, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.2)', boxShadow: '0 4px 14px rgba(160,210,235,0.3)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>

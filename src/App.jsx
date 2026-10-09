@@ -11,6 +11,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { DashboardProvider } from './contexts/DashboardContext';
 import { ToastProvider } from './contexts/ToastContext';
 import AmbientOrbs from './components/ui/AmbientOrbs';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 // Chaque page est un fichier séparé, téléchargé au moment de l'afficher
 const Dashboard = lazy(pageLoaders.Dashboard);
@@ -97,18 +98,20 @@ function App() {
   const [queryClient] = useState(createQueryClient);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <AuthProvider>
-          <DashboardProvider>
-            <MonthProvider>
-              <AmbientOrbs />
-              <AppRoutes />
-            </MonthProvider>
-          </DashboardProvider>
-        </AuthProvider>
-      </ToastProvider>
-    </QueryClientProvider>
+    <ErrorBoundary fullScreen>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <AuthProvider>
+            <DashboardProvider>
+              <MonthProvider>
+                <AmbientOrbs />
+                <AppRoutes />
+              </MonthProvider>
+            </DashboardProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

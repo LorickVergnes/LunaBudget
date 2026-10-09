@@ -38,10 +38,23 @@ export const roundToCents = (value) => Math.round(parseFloat(value) * 100) / 100
 export const computeBalance = ({ income, fixedExp, envExp, savings }) =>
   income - (fixedExp + envExp) - savings;
 
+const toCents = (value) => Math.round(parseFloat(value) * 100);
+
+// Ce que les enveloppes pèsent dans le prévu : le plafond de chacune, ou ce qui y est dépensé
+// si le plafond est dépassé (sinon le prévu serait plus optimiste que le réel).
+export const sumEnvelopeForecast = (envelopes, envelopeExpenses) => {
+  const spentByEnvelope = new Map();
+  (envelopeExpenses || []).forEach(expense => {
+    spentByEnvelope.set(expense.envelope_id, (spentByEnvelope.get(expense.envelope_id) || 0) + toCents(expense.amount));
+  });
+  return (envelopes || []).reduce((cents, envelope) =>
+    cents + Math.max(toCents(envelope.max_amount), spentByEnvelope.get(envelope.id) || 0), 0) / 100;
+};
+
 /**
  * Totaux d'un mois, en réel et en prévu.
- * En prévu, les enveloppes comptent pour leur plafond et l'épargne pour le versement mensuel
- * de chaque objectif (`savings` = les objectifs en cours ce mois-là) ;
+ * En prévu, les enveloppes comptent pour leur plafond (ou leur dépassement) et l'épargne pour
+ * le versement mensuel de chaque objectif (`savings` = les objectifs en cours ce mois-là) ;
  * en réel, on compte ce qui a effectivement été dépensé / versé.
  */
 export const computeMonthTotals = (
@@ -58,7 +71,7 @@ export const computeMonthTotals = (
   forecast: {
     income: sumAmounts(incomes),
     fixedExp: sumAmounts(expenses),
-    envExp: sumAmounts(envelopes, 'max_amount'),
+    envExp: sumEnvelopeForecast(envelopes, envelopeExpenses),
     savings: sumAmounts(savings, 'monthly_amount'),
   },
 });

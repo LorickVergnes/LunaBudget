@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatMonthDate, addMonths, startOfMonth, getNextMonth, getPrevMonth,
-  formatLocalDate, parseLocalDate,
+  formatLocalDate, parseLocalDate, monthOfDateStr, getMonthBounds, defaultDateInMonth,
 } from './dateUtils';
 
 describe('navigation par mois', () => {
@@ -46,5 +46,26 @@ describe('dates locales', () => {
 
   it('formatLocalDate et parseLocalDate sont réciproques', () => {
     expect(formatLocalDate(parseLocalDate('2026-02-28'))).toBe('2026-02-28');
+  });
+});
+
+describe('mois d\'une opération', () => {
+  it('monthOfDateStr donne le mois auquel appartient une date', () => {
+    expect(monthOfDateStr('2026-10-31')).toBe('2026-10-01');
+    expect(monthOfDateStr('2027-01-01')).toBe('2027-01-01');
+  });
+
+  it('getMonthBounds donne le premier et le dernier jour du mois', () => {
+    expect(getMonthBounds('2026-10-01')).toEqual({ min: '2026-10-01', max: '2026-10-31' });
+    expect(getMonthBounds('2026-02-01')).toEqual({ min: '2026-02-01', max: '2026-02-28' });
+    expect(getMonthBounds('2028-02-01')).toEqual({ min: '2028-02-01', max: '2028-02-29' });
+    expect(getMonthBounds('2026-12-01')).toEqual({ min: '2026-12-01', max: '2026-12-31' });
+  });
+
+  it('defaultDateInMonth propose aujourd\'hui dans le mois en cours, sinon le 1er du mois', () => {
+    const now = new Date(2026, 9, 15);
+    expect(defaultDateInMonth('2026-10-01', now)).toBe('2026-10-15');
+    expect(defaultDateInMonth('2026-11-01', now)).toBe('2026-11-01');
+    expect(defaultDateInMonth('2026-09-01', now)).toBe('2026-09-01');
   });
 });

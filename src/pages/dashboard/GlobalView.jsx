@@ -1,90 +1,40 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { useMonth } from '../../contexts/MonthContext';
 import { useDashboardQuery } from '../../hooks/useDashboardQuery';
-import { formatMonthDate, getTodayStr, addMonths } from '../../lib/dateUtils';
-import { computeMonthTotals } from '../../lib/budgetCalculations';
-import { filterActiveGoals } from '../../lib/savingsGoals';
+import { formatMonthDate, getTodayStr } from '../../lib/dateUtils';
+import { buildGlobalHistory } from '../../lib/globalHistory';
 import { TrendingUp, TrendingDown, Globe, CalendarDays } from 'lucide-react';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import LoadError from '../../components/ui/LoadError';
 import TopBar from '../../components/layout/TopBar';
 import useDesktop from '../../hooks/useDesktop';
 
-const EMPTY_HISTORY = { months: [], allTimeBalance: 0 };
+const EMPTY_TOTALS = { rows: [], goals: [] };
 
 const GlobalView = () => {
-    const { selectedDate, setSelectedDate } = useMonth();
     const isDesktop = useDesktop();
     const [showForecast, setShowForecast] = useState(false);
 
-    // Reset to current month on mount
-    useEffect(() => {
-        setSelectedDate(new Date());
-    }, [setSelectedDate]);
+    // Cette vue couvre toujours les 6 derniers mois jusqu'à aujourd'hui : elle ne dépend pas du mois
+    // choisi dans les autres pages, et ne le modifie pas.
+    const now = new Date();
 
-    const { data: history = EMPTY_HISTORY, loading } = useDashboardQuery('global', [formatMonthDate(selectedDate), showForecast], async (dashboardId) => {
-        const todayStr = getTodayStr();
-        const currentMonthStrFull = formatMonthDate(new Date());
-
-        const currentMonthStr = formatMonthDate(selectedDate);
-        const results = await Promise.all([
-            supabase.from('incomes').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
-            supabase.from('expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
-            supabase.from('envelope_expenses').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
-            supabase.from('envelopes').select('max_amount, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr).eq('is_hidden', false),
+    // Une ligne de totaux par mois, calculée par la base : rien n'est additionné à partir de lignes
+    // téléchargées, le résultat reste juste quel que soit le nombre d'opérations.
+    const { data: totals = EMPTY_TOTALS, loading, error, retry } = useDashboardQuery('global', [formatMonthDate(now)], async (dashboardId) => {
+        const [monthly, savings] = await Promise.all([
+            supabase.rpc('get_monthly_totals', { dash_id: dashboardId, as_of: getTodayStr() }),
             supabase.from('savings').select('monthly_amount, start_month, end_month').eq('dashboard_id', dashboardId),
-            supabase.from('saving_entries').select('amount, date, month_date').eq('dashboard_id', dashboardId).lte('month_date', currentMonthStr),
         ]);
-        const failed = results.find(result => result.error);
-        if (failed) throw failed.error;
-        const [{ data: allInc }, { data: allExp }, { data: allEnvExp }, { data: allEnvs }, { data: allSav }, { data: allSavEntries }] = results;
-
-        const getMonthlyTotals = (monthStr, isForecastActive) => {
-            const monthStatus = monthStr < currentMonthStrFull ? 'past' : monthStr === currentMonthStrFull ? 'current' : 'future';
-            const ofMonth = (list) => (list || []).filter(x => x.month_date === monthStr);
-
-            const { real, forecast } = computeMonthTotals(
-                {
-                    incomes: ofMonth(allInc), expenses: ofMonth(allExp),
-                    envelopes: ofMonth(allEnvs), envelopeExpenses: ofMonth(allEnvExp),
-                    savings: filterActiveGoals(allSav, monthStr), savingEntries: ofMonth(allSavEntries)
-                },
-                monthStatus,
-                todayStr
-            );
-            // Le prévisionnel ne s'applique qu'au mois en cours
-            const totals = isForecastActive && monthStatus === 'current' ? forecast : real;
-
-            return { income: totals.income, expense: totals.fixedExp + totals.envExp + totals.savings };
-        };
-
-        const result = [];
-        for (let i = 5; i >= 0; i--) {
-            const d = addMonths(selectedDate, -i);
-            const str = formatMonthDate(d);
-            const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-            
-            const { income, expense } = getMonthlyTotals(str, showForecast);
-            result.push({ label, income, expense, balance: income - expense });
-        }
-
-        const allMonths = [...new Set([
-            ...(allInc||[]).map(x => x.month_date),
-            ...(allExp||[]).map(x => x.month_date),
-            ...(allSavEntries||[]).map(x => x.month_date)
-        ])].sort();
-
-        let totalIncomesSum = 0;
-        let totalExpensesSum = 0;
-        allMonths.forEach(mStr => {
-            const { income, expense } = getMonthlyTotals(mStr, showForecast);
-            totalIncomesSum += income;
-            totalExpensesSum += expense;
-        });
-        
-        return { months: result, allTimeBalance: totalIncomesSum - totalExpensesSum };
+        if (monthly.error) throw monthly.error;
+        if (savings.error) throw savings.error;
+        return { rows: monthly.data || [], goals: savings.data || [] };
     });
-    const { months, allTimeBalance } = history;
+
+    // Passer du réel au prévisionnel ne recharge rien : les deux sont dans la même réponse
+    const history = buildGlobalHistory(totals.rows, totals.goals, { showForecast, now });
+    const months = history.months.map(m => ({ ...m, label: m.date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }) }));
+    const { allTimeBalance } = history;
 
     const allIncome = months.reduce((a, m) => a + m.income, 0);
     const allExpense = months.reduce((a, m) => a + m.expense, 0);
@@ -93,7 +43,7 @@ const GlobalView = () => {
     const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expense)), 1);
 
     const fmt = (n, sign = false) => {
-        const s = n.toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+        const s = n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return sign && n >= 0 ? `+${s} €` : `${s} €`;
     };
 
@@ -135,6 +85,8 @@ const GlobalView = () => {
 
                 {loading ? (
                     <LoadingSpinner />
+                ) : error ? (
+                    <LoadError onRetry={retry} />
                 ) : (
                     <>
                         {/* ── Hero: all-time balance ── */}
@@ -265,6 +217,8 @@ const GlobalView = () => {
 
                 {loading ? (
                     <LoadingSpinner />
+                ) : error ? (
+                    <LoadError onRetry={retry} />
                 ) : (
                     <>
                         {/* All-time Balance Card */}

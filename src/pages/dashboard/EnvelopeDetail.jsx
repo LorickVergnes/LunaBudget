@@ -13,6 +13,8 @@ const CONFIG = {
   totalColor: '#A0D2EB',
   totalPrefix: '',
   hasName: true,
+  // Les dépenses appartiennent au mois de leur enveloppe
+  monthFromParent: true,
   extraRow: { icon: 'ShoppingCart', color: '#A0D2EB' },
   texts: {
     headerLabel: 'Détail Enveloppe',

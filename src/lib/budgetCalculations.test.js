@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getMonthStatus, isRealized, filterRealized, sumAmounts, roundToCents,
-  computeBalance, computeMonthTotals, getDaysLeftInMonth, getDaysInMonth,
+  computeBalance, computeMonthTotals, sumEnvelopeForecast, getDaysLeftInMonth, getDaysInMonth,
 } from './budgetCalculations';
 
 const NOW = new Date(2026, 9, 15); // 15 octobre 2026
@@ -116,6 +116,20 @@ describe('computeMonthTotals', () => {
     const { real, forecast } = computeMonthTotals(data, 'future', TODAY);
     expect(real).toEqual({ income: 0, fixedExp: 0, envExp: 0, savings: 0 });
     expect(forecast.income).toBe(1555);
+  });
+
+  it('en prévu, une enveloppe dépassée compte pour ce qui y est dépensé, pas pour son plafond', () => {
+    const overspent = {
+      envelopes: [{ id: 'courses', max_amount: '400.00' }, { id: 'loisirs', max_amount: '15.00' }],
+      envelopeExpenses: [
+        { envelope_id: 'courses', amount: '35.20', date: '2026-10-10' },
+        { envelope_id: 'loisirs', amount: '18.00', date: '2026-10-03' },
+        { envelope_id: 'loisirs', amount: '10.50', date: '2026-10-28' },
+      ],
+    };
+    // Courses : plafond 400 (35,20 dépensés) ; Loisirs : 28,50 dépensés pour un plafond de 15
+    expect(computeMonthTotals(overspent, 'current', TODAY).forecast.envExp).toBe(428.5);
+    expect(sumEnvelopeForecast(overspent.envelopes, [])).toBe(415);
   });
 
   it('accepte des listes absentes', () => {

@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import MonthSelector from '../../components/layout/MonthSelector';
 import TopBar from '../../components/layout/TopBar';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import LoadError from '../../components/ui/LoadError';
 import BottomModal from '../../components/ui/BottomModal';
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal';
 import { FormCard, AmountInput, TextField, NumberField, MonthField, SubmitButton } from '../../components/ui/FormUI';
@@ -33,7 +34,7 @@ const Savings = () => {
   const monthStr = formatMonthDate(selectedDate);
 
   // Tous les objectifs du dashboard avec leurs versements : changer de mois ne recharge rien
-  const { data: goals = [], loading, refresh } = useDashboardQuery('savings', [], async (dashboardId) => {
+  const { data: goals = [], loading, error, retry, refresh } = useDashboardQuery('savings', [], async (dashboardId) => {
     const { data, error } = await supabase.from('savings')
       .select('*, saving_entries(amount, date, month_date)')
       .eq('dashboard_id', dashboardId)
@@ -289,7 +290,7 @@ const Savings = () => {
           </div>
         </div>
 
-        {loading ? <LoadingSpinner color="#F9A825" /> : (
+        {loading ? <LoadingSpinner color="#F9A825" /> : error ? <LoadError onRetry={retry} /> : (
           <div>
             <div className="desktop-budget-card" style={{ marginBottom: 24, padding: 24, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', color: 'white', border: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -331,7 +332,7 @@ const Savings = () => {
           <MonthSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
 
-        {loading ? <LoadingSpinner color="#F9A825" /> : (
+        {loading ? <LoadingSpinner color="#F9A825" /> : error ? <LoadError onRetry={retry} /> : (
           <>
             <div className="fade-up" style={{ padding: 20, background: 'linear-gradient(135deg, #81BAD8 0%, #CE9C4A 100%)', borderRadius: 18, color: 'white', marginBottom: 20, boxShadow: '0 4px 14px rgba(160,210,235,0.3)', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
               <div style={{ fontSize: 11, opacity: .9, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5 }}>

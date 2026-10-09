@@ -10,7 +10,7 @@ import { markOwnChange, newRowId } from '../lib/ownChanges';
  *
  * - `emptyForm()` : valeurs d'un formulaire vide
  * - `toForm(item)` : remplit le formulaire à partir d'une ligne existante
- * - `toRow(formData, { isEditing })` : ligne à enregistrer (user_id et dashboard_id sont ajoutés ici)
+ * - `toRow(formData, { isEditing })` : ligne à enregistrer (user_id et dashboard_id sont ajoutés ici, à la création)
  * - `messages` : { created, updated }
  * - `refresh` : vient de useDashboardQuery, recharge les données après l'enregistrement
  *
@@ -48,14 +48,15 @@ export function useCrudForm({ table, emptyForm, toForm, toRow, messages, refresh
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const row = { ...toRow(formData, { isEditing: Boolean(editingId) }), user_id: user.id, dashboard_id: activeDashboard.id };
+    const row = toRow(formData, { isEditing: Boolean(editingId) });
     // L'identifiant d'une nouvelle ligne est choisi ici, pour reconnaître notre propre ajout
     // quand le temps réel nous le renvoie (et ne pas recharger les données une seconde fois).
     const rowId = editingId || newRowId();
     markOwnChange(rowId);
+    // L'auteur et le dashboard sont fixés à la création : modifier une ligne ne change pas son auteur
     const { error } = editingId
       ? await supabase.from(table).update(row).eq('id', editingId)
-      : await supabase.from(table).insert([{ id: rowId, ...row }]);
+      : await supabase.from(table).insert([{ id: rowId, ...row, user_id: user.id, dashboard_id: activeDashboard.id }]);
     setSaving(false);
 
     if (error) {

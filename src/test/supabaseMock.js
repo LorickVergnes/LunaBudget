@@ -65,6 +65,10 @@ export const log = { ops: [], reads: [] };
 let listeners = [];
 
 let myInvitations = [];
+// Erreur renvoyée par toutes les lectures (panne réseau simulée), ou null
+let readError = null;
+// Erreur renvoyée par la fonction de récurrence, ou null
+let recurrenceError = null;
 
 // État d'authentification simulé
 let session = { user: USER };
@@ -95,6 +99,7 @@ const execute = (st) => {
     return { data: st.single ? { id: 'new1', ...(Array.isArray(st.payload) ? st.payload[0] : st.payload) } : null, error: null };
   }
   log.reads.push(`${st.table} | ${st.cols.replace(/\s+/g, ' ').trim()} | ${filters.join(' & ')}`);
+  if (readError) return { data: null, error: readError };
   const rows = (DATA[st.table] || []).filter(row => st.filters.every(f => matches(row, f)));
   return { data: st.single ? rows[0] ?? null : rows, error: null };
 };
@@ -111,14 +116,46 @@ const from = (table) => {
     lte(col, val) { st.filters.push([col, 'lte', val]); return builder; },
     order() { return builder; },
     single() { st.single = true; return builder; },
+    maybeSingle() { st.single = true; return builder; },
     then(resolve, reject) { return Promise.resolve().then(() => execute(st)).then(resolve, reject); },
   };
   return builder;
 };
 
+// Même calcul que la fonction SQL get_monthly_totals, sur les données fixes
+const monthlyTotals = (dashId, asOf) => {
+  const currentMonth = `${asOf.slice(0, 7)}-01`;
+  const realized = (row) => row.month_date < currentMonth || (row.month_date === currentMonth && row.date <= asOf);
+  const sum = (rows, key = 'amount') => rows.reduce((cents, row) => cents + Math.round(Number(row[key]) * 100), 0) / 100;
+  const of = (table) => DATA[table].filter(row => row.dashboard_id === dashId);
+  const visible = (table) => of(table).filter(row => row.is_hidden === false);
+  const months = [...new Set(['incomes', 'expenses', 'envelopes', 'envelope_expenses', 'saving_entries'].flatMap(table => of(table).map(row => row.month_date)))].sort();
+
+  return months.map(month => {
+    const inMonth = (rows) => rows.filter(row => row.month_date === month);
+    const envelopeExpenses = inMonth(of('envelope_expenses'));
+    return {
+      month_date: month,
+      income_real: sum(inMonth(visible('incomes')).filter(realized)),
+      income_planned: sum(inMonth(visible('incomes'))),
+      fixed_real: sum(inMonth(visible('expenses')).filter(realized)),
+      fixed_planned: sum(inMonth(visible('expenses'))),
+      envelope_real: sum(envelopeExpenses.filter(realized)),
+      envelope_planned: sum(inMonth(visible('envelopes')).map(envelope => ({
+        amount: Math.max(Number(envelope.max_amount), sum(envelopeExpenses.filter(expense => expense.envelope_id === envelope.id))),
+      }))),
+      savings_real: sum(inMonth(of('saving_entries')).filter(realized)),
+    };
+  });
+};
+
 export const supabase = {
   from,
   rpc: async (name, args) => {
+    if (name === 'create_dashboard') {
+      log.ops.push({ table: 'rpc', op: name, payload: sortKeys(args), filters: [] });
+      return { data: 'new1', error: null };
+    }
     // Les fonctions qui modifient la base sont enregistrées comme des écritures
     if (name === 'accept_invitation' || name === 'decline_invitation') {
       log.ops.push({ table: 'rpc', op: name, payload: sortKeys(args), filters: [] });
@@ -126,6 +163,9 @@ export const supabase = {
       return { data: name === 'accept_invitation' ? DASHBOARD_ID : null, error: null };
     }
     log.reads.push(`rpc ${name} | ${JSON.stringify(sortKeys(args))}`);
+    if (name === 'apply_recurrence' && recurrenceError) return { data: null, error: recurrenceError };
+    if (readError) return { data: null, error: readError };
+    if (name === 'get_monthly_totals') return { data: monthlyTotals(args.dash_id, args.as_of), error: null };
     if (name === 'get_my_invitations') return { data: myInvitations, error: null };
     return { data: null, error: null };
   },
@@ -160,6 +200,7 @@ export const resetMock = () => {
   log.ops.length = 0; log.reads.length = 0; listeners = [];
   session = { user: USER }; nextAuthError = null;
   myInvitations = [];
+  readError = null; recurrenceError = null;
   setMockRole('owner');
   DATA.dashboards[0].invitations = [];
 };
@@ -175,6 +216,11 @@ export function setMockRole(role) {
 export const setMockMyInvitations = (list) => { myInvitations = list; };
 // Invitations envoyées par le propriétaire, en attente
 export const setMockSentInvitations = (list) => { DATA.dashboards[0].invitations = list; };
+
+// Toutes les lectures échouent avec cette erreur (null pour rétablir)
+export const setMockReadError = (error) => { readError = error; };
+// La fonction de récurrence échoue avec cette erreur (null pour rétablir)
+export const setMockRecurrenceError = (error) => { recurrenceError = error; };
 
 // Visiteur non connecté (null) ou connecté
 export const setMockSession = (value) => { session = value; };

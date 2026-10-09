@@ -16,6 +16,8 @@ export const DashboardProvider = ({ children }) => {
   const [dashboards, setDashboards] = useState([]);
   const [activeDashboard, setActiveDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Échec du chargement des dashboards : les pages affichent une erreur plutôt qu'un budget vide
+  const [error, setError] = useState(null);
   // Invitations reçues par l'utilisateur connecté, en attente de sa réponse
   const [myInvitations, setMyInvitations] = useState([]);
   const [invitationsOpen, setInvitationsOpen] = useState(false);
@@ -37,11 +39,13 @@ export const DashboardProvider = ({ children }) => {
       setDashboards([]);
       setActiveDashboard(null);
       setMyInvitations([]);
+      setError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
       // Les invitations envoyées ne sont visibles que du propriétaire (RLS) : la liste est vide pour les autres
       const { data, error } = await supabase
@@ -67,6 +71,7 @@ export const DashboardProvider = ({ children }) => {
 
     } catch (err) {
       console.error('[DashboardContext] Error:', err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -94,19 +99,16 @@ export const DashboardProvider = ({ children }) => {
 
   const createDashboard = useCallback(async (name) => {
     if (!user) return;
-    const { data: newDash, error: dashError } = await supabase
-      .from('dashboards').insert([{ name, owner_id: user.id }]).select().single();
-
+    // Une seule fonction en base crée le dashboard et y inscrit son propriétaire : tout ou rien
+    const { data: newId, error: dashError } = await supabase.rpc('create_dashboard', { dashboard_name: name });
     if (dashError) throw dashError;
 
-    await supabase.from('dashboard_members').insert([
-      { dashboard_id: newDash.id, user_id: user.id, role: 'owner' }
-    ]);
-
+    const newDash = { id: newId, name, owner_id: user.id };
+    // Mémorisé avant le rechargement de la liste, qui ouvre le dashboard mémorisé
+    localStorage.setItem(`activeDashboard_${user.id}`, newId);
     await fetchDashboards();
-    switchDashboard(newDash);
     return newDash;
-  }, [user, fetchDashboards, switchDashboard]);
+  }, [user, fetchDashboards]);
 
   // ── Invitations envoyées (propriétaire) ──
 
@@ -203,6 +205,7 @@ export const DashboardProvider = ({ children }) => {
     dashboards,
     activeDashboard,
     loading,
+    error,
     myRole,
     isOwner,
     canEdit,
@@ -222,7 +225,7 @@ export const DashboardProvider = ({ children }) => {
     removeMember,
     leaveDashboard,
     refreshDashboards: fetchDashboards
-  }), [dashboards, activeDashboard, loading, myRole, isOwner, canEdit, switchDashboard, createDashboard, updateDashboard, deleteDashboard, inviteByEmail, cancelInvitation, myInvitations, invitationsOpen, acceptInvitation, declineInvitation, updateMemberRole, removeMember, leaveDashboard, fetchDashboards]);
+  }), [dashboards, activeDashboard, loading, error, myRole, isOwner, canEdit, switchDashboard, createDashboard, updateDashboard, deleteDashboard, inviteByEmail, cancelInvitation, myInvitations, invitationsOpen, acceptInvitation, declineInvitation, updateMemberRole, removeMember, leaveDashboard, fetchDashboards]);
 
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
 };

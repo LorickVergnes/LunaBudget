@@ -6,6 +6,7 @@ import DesktopSidebar from './DesktopSidebar';
 import BottomNav from './BottomNav';
 import InvitationsModal from '../ui/InvitationsModal';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import ErrorBoundary from '../ui/ErrorBoundary';
 import { preloadPagesWhenIdle } from '../../lib/pageLoaders';
 
 // Affiché à la place de la page pendant le téléchargement de son code (première visite uniquement)
@@ -35,9 +36,12 @@ const AppLayout = ({ mobileOnly = false }) => {
           <DesktopSidebar key={`sidebar-${pathname}`} />
           {/* key : rejoue le fondu d'apparition du contenu à chaque changement de page */}
           <main className="desktop-main fade-in" key={pathname}>
-            <Suspense fallback={pageLoader}>
-              <Outlet />
-            </Suspense>
+            {/* Une page qui plante ne fait pas disparaître l'en-tête ni la navigation */}
+            <ErrorBoundary>
+              <Suspense fallback={pageLoader}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
           </main>
         </div>
         <InvitationsModal />
@@ -47,9 +51,12 @@ const AppLayout = ({ mobileOnly = false }) => {
 
   return (
     <>
-      <Suspense fallback={pageLoader}>
-        <Outlet />
-      </Suspense>
+      {/* key : l'erreur d'une page est oubliée en allant sur une autre */}
+      <ErrorBoundary key={pathname}>
+        <Suspense fallback={pageLoader}>
+          <Outlet />
+        </Suspense>
+      </ErrorBoundary>
       <BottomNav />
       <InvitationsModal />
     </>
